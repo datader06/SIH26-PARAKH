@@ -32,7 +32,7 @@ export default function TeamPage() {
       desc: "In-depth forensic anomaly analysis and PARAKH intelligence handoff operations.",
     },
     {
-      name: "Shiva Verma",
+      name: "Neil Mhatre",
       email: "operator@parakh-intel.org",
       role: "OPERATOR",
       desc: "Front-desk document scanning, camera capture, and preliminary verification triage.",

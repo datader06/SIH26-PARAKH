@@ -71,7 +71,7 @@ export async function ensureDatabaseSeeded() {
       data: {
         email: "operator@parakh-intel.org",
         passwordHash: defaultPassword,
-        name: "Shiva Verma",
+        name: "Neil Mhatre",
         role: "OPERATOR",
         organizationId: org.id,
       },
