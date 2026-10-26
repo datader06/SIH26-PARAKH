@@ -1,0 +1,123 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/session";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const orgId = currentUser.organizationId;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [
+      totalScreenings,
+      todayScreenings,
+      requiresReviewCount,
+      flaggedCount,
+      lowRiskCount,
+      allSessions,
+      ocrResults,
+    ] = await Promise.all([
+      prisma.screeningSession.count({ where: { organizationId: orgId } }),
+      prisma.screeningSession.count({ where: { organizationId: orgId, createdAt: { gte: todayStart } } }),
+      prisma.screeningSession.count({ where: { organizationId: orgId, riskTier: "REVIEW_REQUIRED" } }),
+      prisma.screeningSession.count({ where: { organizationId: orgId, riskTier: "HIGH_RISK" } }),
+      prisma.screeningSession.count({ where: { organizationId: orgId, riskTier: "LOW_RISK" } }),
+      prisma.screeningSession.findMany({
+        where: { organizationId: orgId },
+        select: {
+          documentType: true,
+          riskTier: true,
+          processingTimeMs: true,
+          createdAt: true,
+        },
+      }),
+      prisma.oCRResult.findMany({
+        where: { screeningSession: { organizationId: orgId } },
+        select: { averageConfidence: true },
+      }),
+    ]);
+
+    const verifiedRate =
+      totalScreenings > 0 ? Math.round((lowRiskCount / totalScreenings) * 100) : 0;
+
+    const avgProcessingTime =
+      allSessions.length > 0
+        ? Math.round(
+            allSessions.reduce((acc, s) => acc + s.processingTimeMs, 0) /
+              allSessions.length
+          )
+        : 0;
+
+    const avgOcrAccuracy =
+      ocrResults.length > 0
+        ? Math.round(
+            ocrResults.reduce((acc, r) => acc + r.averageConfidence, 0) /
+              ocrResults.length
+          )
+        : 0;
+
+    // Document type distribution
+    const docDistribution: Record<string, number> = {
+      AADHAAR_CARD: 0,
+      PAN_CARD: 0,
+      PASSPORT: 0,
+      DRIVING_LICENCE: 0,
+      VOTER_ID: 0,
+      UNKNOWN: 0,
+    };
+
+    allSessions.forEach((s) => {
+      if (docDistribution[s.documentType] !== undefined) {
+        docDistribution[s.documentType]++;
+      } else {
+        docDistribution.UNKNOWN++;
+      }
+    });
+
+    const isParakhConfigured = Boolean(
+      process.env.PARAKH_CENTRAL_ENDPOINT &&
+      process.env.PARAKH_API_KEY &&
+      !process.env.PARAKH_API_KEY.includes("placeholder") &&
+      !process.env.PARAKH_CENTRAL_ENDPOINT.includes(".internal")
+    );
+
+    const isGatewayConfigured = Boolean(
+      process.env.VERIFICATION_GATEWAY_URL &&
+      process.env.VERIFICATION_GATEWAY_KEY &&
+      !process.env.VERIFICATION_GATEWAY_URL.includes(".internal")
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        totalScreenings,
+        todayScreenings,
+        requiresReviewCount,
+        flaggedCount,
+        lowRiskCount,
+        verifiedRate,
+        avgProcessingTime,
+        avgOcrAccuracy,
+        docDistribution,
+        systemHealth: {
+          ocrEngine: "OPERATIONAL",
+          classifierEngine: "OPERATIONAL",
+          forensicEngine: "OPERATIONAL",
+          biometricsModule: "MANUAL_REVIEW_REQUIRED", // Truthful state without GPU/WASM model
+          parakhHubGateway: isParakhConfigured ? "CONNECTED" : "OFFLINE_STANDALONE",
+          verificationGateway: isGatewayConfigured ? "OPERATIONAL" : "DISCONNECTED_MANUAL_REVIEW",
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error("[METRICS_GET_ERROR]", error);
+    return NextResponse.json({ error: "Failed to compute operational metrics." }, { status: 500 });
+  }
+}
