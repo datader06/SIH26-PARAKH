@@ -17,9 +17,11 @@ export default function ActivityLogsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("ALL");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -27,9 +29,15 @@ export default function ActivityLogsPage() {
 
       const res = await fetch(`/api/audit-logs?${params.toString()}`);
       const json = await res.json();
-      if (json.success) setLogs(json.data);
+      if (json.success) {
+        setLogs(json.data);
+      } else {
+        setLogs([]);
+        setErrorMessage(json.error || "Failed to load audit logs.");
+      }
     } catch (e) {
       console.error(e);
+      setErrorMessage("Network error while loading audit logs.");
     } finally {
       setLoading(false);
     }
@@ -98,6 +106,11 @@ export default function ActivityLogsPage() {
         <div className="p-5 rounded-xl bg-surface-100 border border-border">
           {loading ? (
             <div className="py-12 text-center text-xs text-ink-faint">Querying security audit logs...</div>
+          ) : errorMessage ? (
+            <div className="py-12 text-center text-xs text-rose-600 flex flex-col items-center gap-2">
+              <Lock className="h-5 w-5 text-rose-500" />
+              <span>{errorMessage}</span>
+            </div>
           ) : logs.length === 0 ? (
             <div className="py-12 text-center text-xs text-ink-faint">No matching audit logs found.</div>
           ) : (

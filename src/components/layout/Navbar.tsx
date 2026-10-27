@@ -12,6 +12,7 @@ import {
   Scan,
   Radio,
   ExternalLink,
+  Menu,
 } from "lucide-react";
 
 interface UserProfile {
@@ -31,7 +32,7 @@ const dropdownMotion = {
   transition: { duration: 0.16, ease: [0.16, 1, 0.3, 1] as const },
 };
 
-export function Navbar() {
+export function Navbar({ onMenuClick }: { onMenuClick?: () => void } = {}) {
   const [user, setUser] = useState<UserProfile | null>(null);
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -91,21 +92,30 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 h-16 w-full border-b border-border bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
       <div className="flex h-full items-center justify-between px-4 sm:px-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-clay-500 text-white shadow-soft transition-transform group-hover:scale-105">
-              <Shield className="h-5 w-5" />
+        <div className="flex items-center gap-2 sm:gap-4">
+          {onMenuClick && (
+            <button
+              onClick={onMenuClick}
+              aria-label="Open navigation menu"
+              className="p-2 -ml-1.5 rounded-xl text-ink-soft hover:text-ink hover:bg-sand-200 transition-colors duration-200 md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+          <Link href="/dashboard" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+            <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-clay-500 text-white shadow-soft transition-transform group-hover:scale-105 shrink-0">
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-display tracking-tight text-base font-bold text-ink">
+                <span className="font-display tracking-tight text-sm sm:text-base font-bold text-ink">
                   PARAKH
                 </span>
-                <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-full bg-clay-50 text-clay-600 border border-clay-200 tracking-wider">
+                <span className="hidden sm:inline text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-full bg-clay-50 text-clay-600 border border-clay-200 tracking-wider">
                   Enterprise
                 </span>
               </div>
-              <p className="text-[11px] text-ink-faint font-medium tracking-tight -mt-0.5">
+              <p className="hidden sm:block text-[11px] text-ink-faint font-medium tracking-tight -mt-0.5">
                 Document Intelligence Platform
               </p>
             </div>

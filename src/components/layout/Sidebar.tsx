@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Scan,
@@ -17,6 +17,7 @@ import {
   Settings,
   ShieldCheck,
   GraduationCap,
+  X,
 } from "lucide-react";
 
 interface NavItem {
@@ -64,70 +65,122 @@ function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   );
 }
 
-export function Sidebar() {
+const mainNav: NavItem[] = [
+  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { label: "New Screening", href: "/scanner", icon: Scan, badge: "Live" },
+  { label: "Applications", href: "/applications", icon: GraduationCap, badge: "AICTE" },
+  { label: "Documents", href: "/documents", icon: Files },
+  { label: "Verification", href: "/verification", icon: CheckSquare },
+  { label: "Reports", href: "/reports", icon: FileBarChart },
+  { label: "Activity Logs", href: "/activity", icon: History },
+];
+
+const adminNav: NavItem[] = [
+  { label: "Integrations", href: "/integrations", icon: Network, badge: "PARAKH" },
+  { label: "API Access", href: "/api-access", icon: Key },
+  { label: "Team & Roles", href: "/team", icon: Users },
+  { label: "Security & Privacy", href: "/security", icon: ShieldCheck },
+  { label: "Settings", href: "/settings", icon: Settings },
+];
+
+function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <div className="space-y-6" onClick={onNavigate}>
+      <div>
+        <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint mb-2">
+          Operations
+        </p>
+        <nav className="space-y-1">
+          {mainNav.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            return <NavLink key={item.href} item={item} isActive={isActive} />;
+          })}
+        </nav>
+      </div>
+
+      <div>
+        <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint mb-2">
+          Governance &amp; Integrations
+        </p>
+        <nav className="space-y-1">
+          {adminNav.map((item) => {
+            const isActive = pathname === item.href;
+            return <NavLink key={item.href} item={item} isActive={isActive} />;
+          })}
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+function HubStatusCard() {
+  return (
+    <div className="p-3.5 rounded-2xl bg-sage-50 border border-sage-200 text-xs space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage-400 opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-sage-500" />
+          </span>
+          <span className="text-[11px] font-semibold text-sage-600">PARAKH Hub Active</span>
+        </div>
+        <span className="text-[10px] font-mono text-ink-faint">v1.0.4</span>
+      </div>
+      <p className="text-[10px] text-ink-faint leading-tight">
+        Evidence records cryptographically linked to central analysis cluster.
+      </p>
+    </div>
+  );
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
 
-  const mainNav: NavItem[] = [
-    { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-    { label: "New Screening", href: "/scanner", icon: Scan, badge: "Live" },
-    { label: "Applications", href: "/applications", icon: GraduationCap, badge: "AICTE" },
-    { label: "Documents", href: "/documents", icon: Files },
-    { label: "Verification", href: "/verification", icon: CheckSquare },
-    { label: "Reports", href: "/reports", icon: FileBarChart },
-    { label: "Activity Logs", href: "/activity", icon: History },
-  ];
-
-  const adminNav: NavItem[] = [
-    { label: "Integrations", href: "/integrations", icon: Network, badge: "PARAKH" },
-    { label: "API Access", href: "/api-access", icon: Key },
-    { label: "Team & Roles", href: "/team", icon: Users },
-    { label: "Security & Privacy", href: "/security", icon: ShieldCheck },
-    { label: "Settings", href: "/settings", icon: Settings },
-  ];
-
   return (
-    <aside className="w-64 shrink-0 border-r border-border bg-surface-100 hidden md:flex flex-col justify-between min-h-[calc(100vh-4rem)] p-4">
-      <div className="space-y-6">
-        <div>
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint mb-2">
-            Operations
-          </p>
-          <nav className="space-y-1">
-            {mainNav.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-              return <NavLink key={item.href} item={item} isActive={isActive} />;
-            })}
-          </nav>
-        </div>
+    <>
+      {/* Desktop sidebar — always visible at md+ */}
+      <aside className="w-64 shrink-0 border-r border-border bg-surface-100 hidden md:flex flex-col justify-between min-h-[calc(100vh-4rem)] p-4">
+        <SidebarContent pathname={pathname} />
+        <HubStatusCard />
+      </aside>
 
-        <div>
-          <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint mb-2">
-            Governance &amp; Integrations
-          </p>
-          <nav className="space-y-1">
-            {adminNav.map((item) => {
-              const isActive = pathname === item.href;
-              return <NavLink key={item.href} item={item} isActive={isActive} />;
-            })}
-          </nav>
-        </div>
-      </div>
-
-      <div className="p-3.5 rounded-2xl bg-sage-50 border border-sage-200 text-xs space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage-400 opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-sage-500" />
-            </span>
-            <span className="text-[11px] font-semibold text-sage-600">PARAKH Hub Active</span>
-          </div>
-          <span className="text-[10px] font-mono text-ink-faint">v1.0.4</span>
-        </div>
-        <p className="text-[10px] text-ink-faint leading-tight">
-          Evidence records cryptographically linked to central analysis cluster.
-        </p>
-      </div>
-    </aside>
+      {/* Mobile drawer — slides in below md, only when opened from the Navbar's menu button */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={onClose}
+              className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm md:hidden"
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as const }}
+              className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface-100 border-r border-border flex flex-col justify-between p-4 pt-5 md:hidden overflow-y-auto"
+            >
+              <div className="space-y-6">
+                <div className="flex items-center justify-between px-1 pb-2 mb-1 border-b border-border">
+                  <span className="font-display font-bold text-ink text-sm">Navigation</span>
+                  <button
+                    onClick={onClose}
+                    aria-label="Close navigation"
+                    className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-sand-200 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <SidebarContent pathname={pathname} onNavigate={onClose} />
+              </div>
+              <HubStatusCard />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

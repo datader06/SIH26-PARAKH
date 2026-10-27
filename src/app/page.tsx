@@ -11,7 +11,18 @@ import {
   ArrowRight,
   FileCheck,
   X,
+  Menu,
 } from "lucide-react";
+
+const LANDING_NAV_LINKS = [
+  { href: "#platform", label: "Platform" },
+  { href: "/scanner", label: "Document Scanner" },
+  { href: "/verification", label: "Verification" },
+  { href: "/reports", label: "Reports" },
+  { href: "/activity", label: "Activity" },
+  { href: "/api-access", label: "API" },
+  { href: "/security", label: "Security" },
+];
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 16 },
@@ -21,6 +32,7 @@ const fadeUp = (delay = 0) => ({
 
 export default function LandingPage() {
   const [showSignInModal, setShowSignInModal] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
   const [selectedRole, setSelectedRole] = useState("OPERATOR");
   const [emailInput, setEmailInput] = useState("operator@parakh-intel.org");
   const [passwordInput, setPasswordInput] = useState("Parakh@Enterprise2026");
@@ -54,45 +66,120 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background text-ink selection:bg-clay-200 selection:text-clay-900">
       {/* Top Navigation */}
-      <header className="border-b border-border bg-background/90 sticky top-0 z-50 backdrop-blur-md">
+      <motion.header
+        initial={{ opacity: 0, y: -14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
+        className="border-b border-border bg-background/90 sticky top-0 z-50 backdrop-blur-md"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-clay-500 flex items-center justify-center text-white shadow-soft">
+          <motion.div
+            className="flex items-center gap-3"
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="h-9 w-9 rounded-xl bg-clay-500 flex items-center justify-center text-white shadow-soft"
+              whileHover={{ rotate: 8, scale: 1.05 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
+            >
               <Shield className="h-5 w-5" />
-            </div>
+            </motion.div>
             <div>
-              <span className="font-display font-bold tracking-tight text-base text-ink">PARAKH</span>
-              <span className="text-ink-faint text-xs block -mt-1 font-medium">Document Intelligence</span>
+              <span className="font-display font-bold tracking-tight text-sm sm:text-base text-ink">PARAKH</span>
+              <span className="hidden sm:block text-ink-faint text-xs -mt-1 font-medium">Document Intelligence</span>
             </div>
-          </div>
+          </motion.div>
 
           <nav className="hidden lg:flex items-center gap-7 text-xs font-medium text-ink-soft">
-            <Link href="#platform" className="hover:text-ink transition-colors">Platform</Link>
-            <Link href="/scanner" className="hover:text-ink transition-colors">Document Scanner</Link>
-            <Link href="/verification" className="hover:text-ink transition-colors">Verification</Link>
-            <Link href="/reports" className="hover:text-ink transition-colors">Reports</Link>
-            <Link href="/activity" className="hover:text-ink transition-colors">Activity</Link>
-            <Link href="/api-access" className="hover:text-ink transition-colors">API</Link>
-            <Link href="/security" className="hover:text-ink transition-colors">Security</Link>
+            {LANDING_NAV_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} className="relative group py-1">
+                <span className="group-hover:text-ink transition-colors">{link.label}</span>
+                <motion.span
+                  className="absolute left-0 -bottom-0.5 h-[1.5px] w-full bg-clay-500 origin-left"
+                  initial={{ scaleX: 0 }}
+                  whileHover={{ scaleX: 1 }}
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
+                />
+              </Link>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <button
+          <div className="flex items-center gap-2 sm:gap-3">
+            <motion.button
               onClick={() => setShowSignInModal(true)}
-              className="px-4 py-2 rounded-xl bg-white hover:bg-sand-200 border border-border text-xs font-semibold text-ink transition-colors duration-200"
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              className="px-3 sm:px-4 py-2 rounded-xl bg-white hover:bg-sand-200 border border-border text-xs font-semibold text-ink transition-colors duration-200"
             >
               Sign In
-            </button>
-            <Link
-              href="/dashboard"
-              className="px-4 py-2 rounded-xl bg-clay-500 hover:bg-clay-600 text-xs font-semibold text-white shadow-soft hover:shadow-card transition-all duration-200 flex items-center gap-1.5"
+            </motion.button>
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+              <Link
+                href="/dashboard"
+                className="px-3 sm:px-4 py-2 rounded-xl bg-clay-500 hover:bg-clay-600 text-xs font-semibold text-white shadow-soft hover:shadow-card transition-all duration-200 flex items-center gap-1.5"
+              >
+                <span className="hidden sm:inline">Operational Console</span>
+                <span className="sm:hidden">Console</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </motion.div>
+            <button
+              onClick={() => setShowMobileNav(true)}
+              aria-label="Open navigation menu"
+              className="p-2 rounded-xl text-ink-soft hover:text-ink hover:bg-sand-200 transition-colors duration-200 lg:hidden"
             >
-              <span>Operational Console</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+              <Menu className="h-5 w-5" />
+            </button>
           </div>
         </div>
-      </header>
+      </motion.header>
+
+      {/* Mobile nav drawer */}
+      <AnimatePresence>
+        {showMobileNav && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowMobileNav(false)}
+              className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm lg:hidden"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as const }}
+              className="fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] bg-background border-l border-border p-5 lg:hidden overflow-y-auto"
+            >
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
+                <span className="font-display font-bold text-ink text-sm">Menu</span>
+                <button
+                  onClick={() => setShowMobileNav(false)}
+                  aria-label="Close navigation menu"
+                  className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-sand-200 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <nav className="flex flex-col gap-1">
+                {LANDING_NAV_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setShowMobileNav(false)}
+                    className="px-3 py-2.5 rounded-xl text-sm font-medium text-ink-soft hover:text-ink hover:bg-sand-100 transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Hero */}
       <section className="relative pt-20 pb-24 overflow-hidden border-b border-border">
@@ -137,21 +224,25 @@ export default function LandingPage() {
             {...fadeUp(0.24)}
             className="mt-8 flex flex-wrap items-center justify-center gap-3.5"
           >
-            <Link
-              href="/scanner"
-              className="px-6 py-3 rounded-xl bg-clay-500 hover:bg-clay-600 text-white font-semibold text-sm shadow-card hover:shadow-lift transition-all duration-200 flex items-center gap-2"
-            >
-              <Scan className="h-4 w-4" />
-              <span>Launch Document Scanner</span>
-            </Link>
+            <motion.div whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.98 }}>
+              <Link
+                href="/scanner"
+                className="px-6 py-3 rounded-xl bg-clay-500 hover:bg-clay-600 text-white font-semibold text-sm shadow-card hover:shadow-lift transition-all duration-200 flex items-center gap-2"
+              >
+                <Scan className="h-4 w-4" />
+                <span>Launch Document Scanner</span>
+              </Link>
+            </motion.div>
 
-            <button
+            <motion.button
               onClick={() => setShowSignInModal(true)}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.98 }}
               className="px-6 py-3 rounded-xl bg-white hover:bg-sand-200 border border-border text-ink font-semibold text-sm transition-colors duration-200 flex items-center gap-2"
             >
               <Lock className="h-4 w-4 text-ink-faint" />
               <span>Access Institutional Portal</span>
-            </button>
+            </motion.button>
           </motion.div>
 
           <motion.div
@@ -177,7 +268,13 @@ export default function LandingPage() {
       {/* Pipeline */}
       <section id="platform" className="py-20 border-b border-border bg-surface-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-2xl mx-auto mb-14">
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
+            className="text-center max-w-2xl mx-auto mb-14"
+          >
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink tracking-tight">
               Enterprise Document Screening Architecture
             </h2>
@@ -185,7 +282,7 @@ export default function LandingPage() {
               An end-to-end operational pipeline combining optical character recognition, structural verification,
               forensic inspection, and explainable risk assessment.
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
@@ -210,10 +307,11 @@ export default function LandingPage() {
             ].map((step, i) => (
               <motion.div
                 key={step.title}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] as const }}
-                whileHover={{ y: -4 }}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.55, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] as const }}
+                whileHover={{ y: -6, scale: 1.015 }}
                 className="p-6 rounded-2xl bg-white border border-border shadow-soft hover:shadow-card transition-shadow duration-300"
               >
                 <div
@@ -238,8 +336,19 @@ export default function LandingPage() {
       {/* Compliance */}
       <section id="security" className="py-16 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="p-8 rounded-3xl bg-white border border-border shadow-card grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            <div>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
+            className="p-8 rounded-3xl bg-white border border-border shadow-card grid grid-cols-1 lg:grid-cols-2 gap-8 items-center"
+          >
+            <motion.div
+              initial={{ opacity: 0, x: -16 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] as const }}
+            >
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-clay-50 text-clay-700 text-xs font-semibold border border-clay-200 mb-3">
                 <Lock className="h-3.5 w-3.5" />
                 <span>Enterprise Data Governance</span>
@@ -265,9 +374,15 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="bg-sand-100 p-5 rounded-2xl border border-border font-mono text-xs text-ink-soft space-y-2">
+            <motion.div
+              initial={{ opacity: 0, x: 16 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.55, delay: 0.2, ease: [0.16, 1, 0.3, 1] as const }}
+              className="bg-sand-100 p-5 rounded-2xl border border-border font-mono text-xs text-ink-soft space-y-2"
+            >
               <div className="flex items-center justify-between pb-2 border-b border-border text-ink-faint">
                 <span>SECURITY AUDIT STREAM</span>
                 <span className="text-sage-600">ACTIVE LOGGING</span>
@@ -288,13 +403,19 @@ export default function LandingPage() {
                 <span className="text-clay-600">[2026-09-15T09:18:32Z]</span> RETENTION_DAEMON: Ephemeral buffer
                 cleared.
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-10 bg-surface-100 text-ink-faint text-xs">
+      <motion.footer
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-40px" }}
+        transition={{ duration: 0.6 }}
+        className="py-10 bg-surface-100 text-ink-faint text-xs"
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <Shield className="h-4 w-4 text-clay-500" />
@@ -311,7 +432,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-4 text-center sm:text-left text-[11px] text-ink-faint">
           This system is restricted to authorized operational personnel for lawful identity screening and compliance purposes.
         </div>
-      </footer>
+      </motion.footer>
 
       {/* Sign In Modal */}
       <AnimatePresence>
