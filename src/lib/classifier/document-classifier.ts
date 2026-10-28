@@ -38,8 +38,11 @@ export class DocumentClassifier {
       scores.AADHAAR_CARD.score += 20;
       scores.AADHAAR_CARD.signals.push("Standard Aadhaar bilingual/demographic markers detected");
     }
-    // 12-digit format check
-    if (/\b\d{4}\s\d{4}\s\d{4}\b/.test(text) || /\b\d{12}\b/.test(text)) {
+    // 12-digit format check. OCR noise from mixed-script layouts can insert
+    // stray punctuation where whitespace should be between digit groups, so
+    // tolerate a few common OCR artifacts (-, ., |) as a group separator in
+    // addition to clean whitespace or no separator at all.
+    if (/\b\d{4}[\s\-.|]{0,2}\d{4}[\s\-.|]{0,2}\d{4}\b/.test(text)) {
       scores.AADHAAR_CARD.score += 35;
       scores.AADHAAR_CARD.signals.push("12-digit numeric sequence matching Aadhaar UID structure");
     }

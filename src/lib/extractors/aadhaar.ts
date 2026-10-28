@@ -59,11 +59,13 @@ export function extractAadhaarFields(text: string): ParsedField[] {
   const fields: ParsedField[] = [];
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
-  // 1. Aadhaar UID extraction
-  const uidRegex = /\b(\d{4}\s\d{4}\s\d{4}|\d{12})\b/;
+  // 1. Aadhaar UID extraction. Tolerate stray OCR punctuation between digit
+  // groups (-, ., |) in addition to clean whitespace, since mixed-script
+  // layouts can introduce noise where a space should be.
+  const uidRegex = /\b(\d{4}[\s\-.|]{0,2}\d{4}[\s\-.|]{0,2}\d{4}|\d{12})\b/;
   const uidMatch = text.match(uidRegex);
   if (uidMatch) {
-    const rawUid = uidMatch[0].replace(/\s/g, "");
+    const rawUid = uidMatch[0].replace(/\D/g, "");
     const isValidVerhoeff = validateVerhoeff(rawUid);
     fields.push({
       key: "aadhaar_number",

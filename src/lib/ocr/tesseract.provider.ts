@@ -1,4 +1,4 @@
-import { createWorker } from "tesseract.js";
+import { createWorker, PSM } from "tesseract.js";
 import { IOCRProvider, OCRResponse, OCRWord } from "./provider.interface";
 import path from "path";
 import fs from "fs";
@@ -43,7 +43,19 @@ export class TesseractProvider implements IOCRProvider {
     try {
       const workerPath = resolveWorkerPath();
 
-      worker = await createWorker("eng", 1, workerPath ? { workerPath } : undefined);
+      // Indian identity documents are bilingual — a regional script paired with
+      // English (e.g. Aadhaar, PAN, Voter ID). An English-only model not only
+      // fails to read the regional-script portion, it also degrades recognition
+      // of the adjacent English text due to mixed-script layout segmentation
+      // errors. Hindi is the most common pairing across demo/test documents;
+      // other scheduled languages (Bengali, Tamil, etc.) remain a known gap.
+      worker = await createWorker("eng+hin", 1, workerPath ? { workerPath } : undefined);
+
+      // Default page segmentation assumes a single block of uniform prose,
+      // which misreads ID cards badly: their text sits in scattered label/value
+      // pairs around a photo and QR code, not one paragraph. SPARSE_TEXT finds
+      // text regions independently instead of trying to force them into columns.
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
 
       const ret = await worker.recognize(imageSource);
       const executionTimeMs = Date.now() - startTime;
