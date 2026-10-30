@@ -2,9 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { AppShell } from "@/components/layout/AppShell";
-import { HBarChart, DonutChart, Panel, STATUS, CATEGORICAL } from "@/components/charts/Charts";
+import {
+  HBarChart,
+  DonutChart,
+  Panel,
+  STATUS,
+  CATEGORICAL,
+} from "@/components/charts/Charts";
 import {
   ArrowLeft,
   Layers,
@@ -48,7 +54,12 @@ interface InsightsData {
   totalApplications: number;
   categoryBreakdown: Record<string, number>;
   scoreDistribution: { range: string; count: number }[];
-  topDeficiencies: { ruleId: string; title: string; severity: string; count: number }[];
+  topDeficiencies: {
+    ruleId: string;
+    title: string;
+    severity: string;
+    count: number;
+  }[];
   sourceStanding: Record<string, number>;
   crossDocumentFlaggedCount: number;
   triageQueue: {
@@ -63,31 +74,48 @@ interface InsightsData {
 }
 
 export default function PortfolioInsightsPage() {
+  const reduceMotion = useReducedMotion();
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
     fetch("/api/institution-applications/insights")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok)
+          throw new Error("Unable to load this workspace. Please try again.");
+        return r.json();
+      })
       .then((json) => {
         if (json.success) setData(json.data);
+        else throw new Error(json.error || "Unable to load this workspace.");
       })
+      .catch((err) =>
+        setError(err.message || "Connection failed. Please try again."),
+      )
       .finally(() => setLoading(false));
-  }, []);
+  }, [attempt]);
 
-  const sourceCheckedTotal = data ? Object.values(data.sourceStanding).reduce((a, b) => a + b, 0) : 0;
+  const sourceCheckedTotal = data
+    ? Object.values(data.sourceStanding).reduce((a, b) => a + b, 0)
+    : 0;
   const sourceVerifiedCoverage =
     data && sourceCheckedTotal > 0
-      ? Math.round(((data.sourceStanding["VERIFIED"] || 0) / sourceCheckedTotal) * 100)
+      ? Math.round(
+          ((data.sourceStanding["VERIFIED"] || 0) / sourceCheckedTotal) * 100,
+        )
       : 0;
 
   return (
     <AppShell>
       <div className="space-y-6">
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          initial={reduceMotion ? false : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: reduceMotion ? 0 : 0.4 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border"
         >
           <div>
@@ -98,21 +126,41 @@ export default function PortfolioInsightsPage() {
               <ArrowLeft className="h-3.5 w-3.5" />
               <span>Applications</span>
             </Link>
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-ink tracking-tight">
+            <h1 className="font-display text-2xl sm:text-3xl font-semibold text-ink tracking-tight">
               Portfolio Insights
             </h1>
             <p className="text-xs text-ink-soft mt-0.5 max-w-2xl">
-              Aggregate signals across every institutional application in this organization — where deficiencies
-              cluster, how verification coverage stands, and which cases need attention first.
+              Aggregate signals across every institutional application in this
+              organization — where deficiencies cluster, how verification
+              coverage stands, and which cases need attention first.
             </p>
           </div>
         </motion.div>
 
-        {loading ? (
-          <div className="py-24 text-center text-ink-faint text-sm">Computing portfolio insights…</div>
+        {error ? (
+          <div
+            role="alert"
+            className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-center"
+          >
+            <p className="text-sm text-rose-700">{error}</p>
+            <button
+              onClick={() => setAttempt((value) => value + 1)}
+              className="mt-4 rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold text-ink"
+            >
+              Try again
+            </button>
+          </div>
+        ) : loading ? (
+          <div
+            role="status"
+            className="rounded-2xl border border-border bg-white py-24 text-center text-ink-soft text-sm"
+          >
+            Computing portfolio insights…
+          </div>
         ) : !data || data.totalApplications === 0 ? (
           <div className="py-24 text-center text-ink-faint text-sm">
-            No applications yet — insights will populate once cases are created and validated.
+            No applications yet — insights will populate once cases are created
+            and validated.
           </div>
         ) : (
           <>
@@ -142,9 +190,12 @@ export default function PortfolioInsightsPage() {
               ].map((card, i) => (
                 <motion.div
                   key={card.label}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.45, delay: i * 0.06 }}
+                  transition={{
+                    duration: reduceMotion ? 0 : 0.45,
+                    delay: reduceMotion ? 0 : i * 0.06,
+                  }}
                   className="p-4 rounded-2xl bg-white border border-border shadow-soft"
                 >
                   <div className="flex items-center justify-between text-ink-soft mb-2">
@@ -154,15 +205,21 @@ export default function PortfolioInsightsPage() {
                         card.tone === "clay"
                           ? "bg-clay-50 text-clay-600"
                           : card.tone === "rose"
-                          ? "bg-rose-50 text-rose-500"
-                          : "bg-dusk-50 text-dusk-600"
+                            ? "bg-rose-50 text-rose-500"
+                            : "bg-dusk-50 text-dusk-600"
                       }`}
                     >
                       {card.icon}
                     </div>
                   </div>
-                  <div className="text-2xl font-bold font-mono text-ink">{card.value}</div>
-                  {card.sub && <p className="text-[11px] text-ink-faint mt-1.5 leading-snug">{card.sub}</p>}
+                  <div className="text-2xl font-bold font-mono text-ink">
+                    {card.value}
+                  </div>
+                  {card.sub && (
+                    <p className="text-[11px] text-ink-faint mt-1.5 leading-snug">
+                      {card.sub}
+                    </p>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -171,7 +228,7 @@ export default function PortfolioInsightsPage() {
               <Panel
                 title="Most Frequent Deficiencies"
                 subtitle="Which statutory checks fail most often across the portfolio — a systemic pattern, not a single case"
-                icon={<ShieldAlert className="h-4.5 w-4.5" />}
+                icon={<ShieldAlert className="h-[18px] w-[18px]" />}
                 delay={0.1}
               >
                 <HBarChart
@@ -185,7 +242,10 @@ export default function PortfolioInsightsPage() {
                 <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border text-[11px] text-ink-faint flex-wrap">
                   {Object.entries(SEVERITY_COLOR).map(([sev, color]) => (
                     <span key={sev} className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
                       {sev}
                     </span>
                   ))}
@@ -195,7 +255,7 @@ export default function PortfolioInsightsPage() {
               <Panel
                 title="Compliance Score Distribution"
                 subtitle="How validated applications spread across the preliminary advisory score band"
-                icon={<Layers className="h-4.5 w-4.5" />}
+                icon={<Layers className="h-[18px] w-[18px]" />}
                 delay={0.15}
               >
                 <HBarChart
@@ -211,30 +271,34 @@ export default function PortfolioInsightsPage() {
               <Panel
                 title="Application Category Volume"
                 subtitle="Case mix by regulatory application type"
-                icon={<Layers className="h-4.5 w-4.5" />}
+                icon={<Layers className="h-[18px] w-[18px]" />}
                 delay={0.2}
               >
                 <DonutChart
-                  items={Object.entries(data.categoryBreakdown).map(([cat, count], i) => ({
-                    label: CATEGORY_LABEL[cat] || cat,
-                    value: count,
-                    color: CATEGORICAL[i % CATEGORICAL.length],
-                  }))}
+                  items={Object.entries(data.categoryBreakdown).map(
+                    ([cat, count], i) => ({
+                      label: CATEGORY_LABEL[cat] || cat,
+                      value: count,
+                      color: CATEGORICAL[i % CATEGORICAL.length],
+                    }),
+                  )}
                 />
               </Panel>
 
               <Panel
                 title="External Source Verification Standing"
                 subtitle="Outcomes of issuer/source-authority checks across the whole portfolio — directly reflects manual-effort reduction"
-                icon={<ShieldAlert className="h-4.5 w-4.5" />}
+                icon={<ShieldAlert className="h-[18px] w-[18px]" />}
                 delay={0.25}
               >
                 <HBarChart
-                  items={Object.entries(data.sourceStanding).map(([status, count]) => ({
-                    label: status.replace(/_/g, " "),
-                    value: count,
-                    color: SOURCE_STATUS_COLOR[status] || STATUS.neutral,
-                  }))}
+                  items={Object.entries(data.sourceStanding).map(
+                    ([status, count]) => ({
+                      label: status.replace(/_/g, " "),
+                      value: count,
+                      color: SOURCE_STATUS_COLOR[status] || STATUS.neutral,
+                    }),
+                  )}
                   valueSuffix=" check(s)"
                 />
               </Panel>
@@ -243,7 +307,7 @@ export default function PortfolioInsightsPage() {
             <Panel
               title="Reviewer Triage Queue"
               subtitle="Active cases ranked by outstanding critical findings first, then by how long they've been waiting — what to look at next, not a duplicate of the case list"
-              icon={<ClipboardList className="h-4.5 w-4.5" />}
+              icon={<ClipboardList className="h-[18px] w-[18px]" />}
               delay={0.3}
             >
               {data.triageQueue.length === 0 ? (
@@ -260,7 +324,9 @@ export default function PortfolioInsightsPage() {
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-clay-600">{app.applicationNumber}</span>
+                          <span className="font-mono text-xs font-bold text-clay-600">
+                            {app.applicationNumber}
+                          </span>
                           {app.criticalCount > 0 && (
                             <span
                               className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-white"
@@ -270,11 +336,17 @@ export default function PortfolioInsightsPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-ink-soft truncate mt-0.5">{app.institutionName}</p>
+                        <p className="text-xs text-ink-soft truncate mt-0.5">
+                          {app.institutionName}
+                        </p>
                       </div>
                       <div className="flex items-center gap-4 shrink-0">
-                        <span className="text-[11px] text-ink-faint">{app.ageDays}d waiting</span>
-                        <span className="text-xs font-mono font-semibold text-ink">{app.complianceScore}%</span>
+                        <span className="text-[11px] text-ink-faint">
+                          {app.ageDays}d waiting
+                        </span>
+                        <span className="text-xs font-mono font-semibold text-ink">
+                          {app.complianceScore}%
+                        </span>
                         <ArrowUpRight className="h-3.5 w-3.5 text-ink-faint group-hover:text-clay-600 transition-colors" />
                       </div>
                     </Link>

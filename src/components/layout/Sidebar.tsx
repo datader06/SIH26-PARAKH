@@ -1,186 +1,241 @@
 "use client";
-
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard,
-  Scan,
-  Files,
-  CheckSquare,
+  Activity,
+  ArrowUpRight,
+  Building2,
+  ChartNoAxesCombined,
   FileBarChart,
-  History,
-  Network,
-  Key,
-  Users,
-  Settings,
-  ShieldCheck,
+  Files,
   GraduationCap,
+  KeyRound,
+  LayoutDashboard,
+  Network,
+  ScanLine,
+  Settings2,
+  ShieldCheck,
+  Users,
   X,
 } from "lucide-react";
+import { useSession } from "@/components/providers/SessionProvider";
 
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  badge?: string;
-}
-
-function NavLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
-  const Icon = item.icon;
-  return (
-    <Link href={item.href} className="relative block">
-      {isActive && (
-        <motion.span
-          layoutId="sidebar-active"
-          className="absolute inset-0 rounded-xl bg-clay-500 shadow-soft"
-          transition={{ type: "spring", stiffness: 420, damping: 32 }}
-        />
-      )}
-      <span
-        className={`relative flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors duration-200 ${
-          isActive ? "text-white font-semibold" : "text-ink-soft hover:text-ink hover:bg-sand-200"
-        }`}
-      >
-        <span className="flex items-center gap-2.5">
-          <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-ink-faint"}`} />
-          <span>{item.label}</span>
-        </span>
-        {item.badge && (
-          <span
-            className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-              isActive
-                ? "bg-white/20 text-white"
-                : item.badge === "Live"
-                ? "bg-sage-100 text-sage-600"
-                : "bg-dusk-50 text-dusk-600"
-            }`}
-          >
-            {item.badge}
-          </span>
-        )}
-      </span>
-    </Link>
-  );
-}
-
-const mainNav: NavItem[] = [
-  { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { label: "New Screening", href: "/scanner", icon: Scan, badge: "Live" },
-  { label: "Applications", href: "/applications", icon: GraduationCap, badge: "AICTE" },
-  { label: "Documents", href: "/documents", icon: Files },
-  { label: "Verification", href: "/verification", icon: CheckSquare },
-  { label: "Reports", href: "/reports", icon: FileBarChart },
-  { label: "Activity Logs", href: "/activity", icon: History },
+export const workspaceNavigation = [
+  {
+    label: "Overview",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    group: "Workspace",
+  },
+  {
+    label: "Applications",
+    href: "/applications",
+    icon: GraduationCap,
+    group: "Workspace",
+  },
+  {
+    label: "Portfolio insights",
+    href: "/applications/insights",
+    icon: ChartNoAxesCombined,
+    group: "Workspace",
+  },
+  {
+    label: "Document scanner",
+    href: "/scanner",
+    icon: ScanLine,
+    group: "Intelligence",
+  },
+  {
+    label: "Document registry",
+    href: "/documents",
+    icon: Files,
+    group: "Intelligence",
+  },
+  {
+    label: "Verification",
+    href: "/verification",
+    icon: ShieldCheck,
+    group: "Intelligence",
+  },
+  {
+    label: "Reports",
+    href: "/reports",
+    icon: FileBarChart,
+    group: "Intelligence",
+  },
+  {
+    label: "Activity log",
+    href: "/activity",
+    icon: Activity,
+    group: "Governance",
+  },
+  {
+    label: "Integrations",
+    href: "/integrations",
+    icon: Network,
+    group: "Governance",
+  },
+  {
+    label: "API access",
+    href: "/api-access",
+    icon: KeyRound,
+    group: "Governance",
+  },
+  { label: "Team & roles", href: "/team", icon: Users, group: "Governance" },
+  {
+    label: "Security & privacy",
+    href: "/security",
+    icon: ShieldCheck,
+    group: "Governance",
+  },
+  {
+    label: "Settings",
+    href: "/settings",
+    icon: Settings2,
+    group: "Governance",
+  },
 ];
-
-const adminNav: NavItem[] = [
-  { label: "Integrations", href: "/integrations", icon: Network, badge: "PARAKH" },
-  { label: "API Access", href: "/api-access", icon: Key },
-  { label: "Team & Roles", href: "/team", icon: Users },
-  { label: "Security & Privacy", href: "/security", icon: ShieldCheck },
-  { label: "Settings", href: "/settings", icon: Settings },
-];
-
-function SidebarContent({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  return (
-    <div className="space-y-6" onClick={onNavigate}>
-      <div>
-        <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint mb-2">
-          Operations
-        </p>
-        <nav className="space-y-1">
-          {mainNav.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            return <NavLink key={item.href} item={item} isActive={isActive} />;
-          })}
-        </nav>
-      </div>
-
-      <div>
-        <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-faint mb-2">
-          Governance &amp; Integrations
-        </p>
-        <nav className="space-y-1">
-          {adminNav.map((item) => {
-            const isActive = pathname === item.href;
-            return <NavLink key={item.href} item={item} isActive={isActive} />;
-          })}
-        </nav>
-      </div>
-    </div>
-  );
-}
-
-function HubStatusCard() {
-  return (
-    <div className="p-3.5 rounded-2xl bg-sage-50 border border-sage-200 text-xs space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sage-400 opacity-60" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-sage-500" />
-          </span>
-          <span className="text-[11px] font-semibold text-sage-600">PARAKH Hub Active</span>
-        </div>
-        <span className="text-[10px] font-mono text-ink-faint">v1.0.4</span>
-      </div>
-      <p className="text-[10px] text-ink-faint leading-tight">
-        Evidence records cryptographically linked to central analysis cluster.
-      </p>
-    </div>
-  );
-}
-
-export function Sidebar({ mobileOpen = false, onClose }: { mobileOpen?: boolean; onClose?: () => void }) {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-
+  const { user } = useSession();
   return (
     <>
-      {/* Desktop sidebar — always visible at md+ */}
-      <aside className="w-64 shrink-0 border-r border-border bg-surface-100 hidden md:flex flex-col justify-between min-h-[calc(100vh-4rem)] p-4">
-        <SidebarContent pathname={pathname} />
-        <HubStatusCard />
+      <Link
+        href="/dashboard"
+        onClick={onNavigate}
+        className="flex items-center gap-3 px-3 py-2 text-ink"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#b9cdb7] bg-white/70">
+          <ShieldCheck className="h-5 w-5 text-clay-600" />
+        </span>
+        <span>
+          <span className="block font-display text-lg font-bold tracking-[0.12em]">
+            PARAKH
+          </span>
+          <span className="block text-[9px] uppercase tracking-[0.2em] text-[#566e5d]">
+            Institutional intelligence
+          </span>
+        </span>
+      </Link>
+      <div className="mx-2 mb-5 mt-7 flex items-center gap-2.5 rounded-xl border border-[#c8d8c5] bg-white/60 p-3">
+        <Building2 className="h-4 w-4 shrink-0 text-[#875e3d]" />
+        <div className="min-w-0">
+          <p className="text-[9px] uppercase tracking-[0.16em] text-[#566e5d]">
+            Organization
+          </p>
+          <p
+            className="mt-1 truncate text-xs font-medium text-[#304c3a]"
+            title={user?.organizationName}
+          >
+            {user?.organizationName || "Your workspace"}
+          </p>
+        </div>
+      </div>
+      <nav aria-label="Workspace navigation" className="flex-1 space-y-6">
+        {["Workspace", "Intelligence", "Governance"].map((group) => (
+          <div key={group}>
+            <p className="mb-2 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#607866]">
+              {group}
+            </p>
+            <div className="space-y-1">
+              {workspaceNavigation
+                .filter((item) => item.group === group)
+                .map((item) => {
+                  const active =
+                    item.href === "/applications"
+                      ? pathname === item.href ||
+                        (pathname.startsWith("/applications/") &&
+                          !pathname.startsWith("/applications/insights"))
+                      : pathname === item.href ||
+                        pathname.startsWith(item.href + "/");
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d69b79] ${active ? "bg-white text-clay-700" : "text-[#4b6555] hover:bg-white/70 hover:text-ink"}`}
+                    >
+                      <Icon
+                        className={`h-4 w-4 shrink-0 ${active ? "text-clay-700" : "text-[#607866] group-hover:text-ink"}`}
+                      />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+            </div>
+          </div>
+        ))}
+      </nav>
+      <div className="mt-7 border-t border-[#c8d8c5] px-3 pt-4">
+        <p className="text-[10px] leading-relaxed text-[#607866]">
+          Evidence informs.
+          <br />
+          <span className="text-[#3c5944]">People decide.</span>
+        </p>
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="mt-3 inline-flex items-center gap-1 text-[10px] text-[#875e3d] hover:text-ink"
+        >
+          About PARAKH
+          <ArrowUpRight className="h-3 w-3" />
+        </Link>
+      </div>
+    </>
+  );
+}
+export function Sidebar({
+  mobileOpen = false,
+  onClose,
+}: {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    if (mobileOpen && !element.open) element.showModal();
+    if (!mobileOpen && element.open) element.close();
+  }, [mobileOpen]);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileOpen]);
+  return (
+    <>
+      <aside className="app-sidebar no-print border-r border-border sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col overflow-y-auto bg-[#e8efe6] px-4 py-6 md:flex">
+        <SidebarContent />
       </aside>
-
-      {/* Mobile drawer — slides in below md, only when opened from the Navbar's menu button */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={onClose}
-              className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm md:hidden"
-            />
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as const }}
-              className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-surface-100 border-r border-border flex flex-col justify-between p-4 pt-5 md:hidden overflow-y-auto"
-            >
-              <div className="space-y-6">
-                <div className="flex items-center justify-between px-1 pb-2 mb-1 border-b border-border">
-                  <span className="font-display font-bold text-ink text-sm">Navigation</span>
-                  <button
-                    onClick={onClose}
-                    aria-label="Close navigation"
-                    className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-sand-200 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <SidebarContent pathname={pathname} onNavigate={onClose} />
-              </div>
-              <HubStatusCard />
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      <dialog
+        ref={dialog}
+        aria-label="Workspace navigation"
+        onCancel={onClose}
+        onClose={onClose}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) onClose?.();
+        }}
+        className="workspace-drawer fixed inset-y-0 left-0 right-auto m-0 h-dvh max-h-none w-[288px] max-w-[90vw] border-0 bg-[#e8efe6] p-0 text-ink backdrop:bg-[#e8efe6]/60 backdrop:backdrop-blur-sm"
+      >
+        <div className="flex min-h-full flex-col px-4 pb-6 pt-5">
+          <button
+            autoFocus
+            aria-label="Close navigation"
+            onClick={onClose}
+            className="mb-3 self-end rounded-lg p-2 text-[#4b6555] hover:bg-white/10"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <SidebarContent onNavigate={onClose} />
+        </div>
+      </dialog>
     </>
   );
 }

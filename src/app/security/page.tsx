@@ -1,170 +1,260 @@
 "use client";
-
 import React, { useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   ShieldCheck,
-  Lock,
+  LockKeyhole,
   Trash2,
+  Clock3,
+  ScrollText,
+  ArrowUpRight,
+  Loader2,
+  AlertCircle,
   CheckCircle2,
-  Clock,
-  FileCheck,
-  AlertTriangle,
 } from "lucide-react";
 
 export default function SecurityPrivacyPage() {
-  const [retentionPolicy, setRetentionPolicy] = useState("30_DAYS");
-  const [purgeSessionId, setPurgeSessionId] = useState("");
-  const [isPurging, setIsPurging] = useState(false);
-
-  const handleManualPurge = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!purgeSessionId) return;
-
-    setIsPurging(true);
+  const [retention, setRetention] = useState("30_DAYS");
+  const [reference, setReference] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState(false);
+  async function purge(event: React.FormEvent) {
+    event.preventDefault();
+    if (!reference.trim() || !confirmed || busy) return;
+    setBusy(true);
+    setMessage("");
+    setError(false);
     try {
-      const res = await fetch(`/api/screenings/${purgeSessionId}`, { method: "DELETE" });
-      const json = await res.json();
-      if (json.success) {
-        alert("Document image payload purged successfully.");
-        setPurgeSessionId("");
-      } else {
-        alert(json.error || "Purge failed.");
-      }
-    } catch {
-      alert("Purge network error.");
+      const response = await fetch(
+        `/api/screenings/${encodeURIComponent(reference.trim())}`,
+        { method: "DELETE" },
+      );
+      const result = await response.json();
+      if (!response.ok || !result.success)
+        throw new Error(
+          result.error || "The image could not be purged. Please try again.",
+        );
+      setMessage(
+        "Original document image purged. Screening metadata, extracted fields, OCR text and any selfie remain in the record.",
+      );
+      setReference("");
+      setConfirmed(false);
+    } catch (failure) {
+      setError(true);
+      setMessage(
+        failure instanceof Error
+          ? failure.message
+          : "Network error. Check your connection and try again.",
+      );
     } finally {
-      setIsPurging(false);
+      setBusy(false);
     }
-  };
-
+  }
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
-                Security Architecture & Data Retention Policy
-              </h1>
-              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 font-semibold">
-                Governance
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-clay-600">
+              Governance / Privacy
+            </p>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              Handle evidence with care.
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
+              Understand the data lifecycle and manage original screening
+              images.
+            </p>
+          </div>
+          <Link
+            href="/activity"
+            className="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-xs font-medium text-ink hover:bg-surface-100"
+          >
+            Activity records
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </header>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            {
+              icon: LockKeyhole,
+              title: "Sensitive-field controls",
+              detail:
+                "The screening interface masks identifiers. Authorized reveal requests require a reason. This is not a claim that stored records are encrypted or masked.",
+            },
+            {
+              icon: Clock3,
+              title: "Manual image lifecycle",
+              detail:
+                "Original document bytes are stored with screening records. Image purging is available on demand; automatic expiry is not currently scheduled.",
+            },
+            {
+              icon: ScrollText,
+              title: "Recorded activity",
+              detail:
+                "Supported actions write audit events to the database. Audit records are not a cryptographically immutable ledger.",
+            },
+          ].map(({ icon: Icon, title, detail }) => (
+            <section
+              key={title}
+              className="rounded-2xl border border-border bg-white p-6"
+            >
+              <span className="inline-flex rounded-xl bg-clay-50 p-2.5 text-clay-600">
+                <Icon className="h-4 w-4" />
+              </span>
+              <h2 className="mt-5 text-sm font-semibold text-ink">{title}</h2>
+              <p className="mt-3 text-xs leading-6 text-ink-soft">{detail}</p>
+            </section>
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+          <section className="rounded-2xl border border-border bg-white p-6 sm:p-7">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-display text-lg font-semibold text-ink">
+                Retention policy preview
+              </h2>
+              <span className="rounded-full bg-surface-200 px-2.5 py-1 text-[10px] text-ink-soft">
+                Local only
               </span>
             </div>
-            <p className="text-xs text-ink-soft mt-0.5">
-              Configurable privacy lifecycle controls, ephemeral processing buffers, and on-demand purge tools.
+            <p className="mt-3 text-xs leading-6 text-ink-soft">
+              Explore a proposed retention window. This selection does not save
+              a policy or schedule deletion.
             </p>
-          </div>
-        </div>
-
-        {/* Core Safeguards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-5 rounded-xl bg-surface-100 border border-border space-y-2">
-            <Lock className="h-5 w-5 text-blue-400 mb-1" />
-            <h3 className="text-xs font-bold text-ink uppercase tracking-wider">PII Masking by Default</h3>
-            <p className="text-[11px] text-ink-soft leading-relaxed">
-              All government identification numbers (Aadhaar, PAN, Passport) are masked at rest and in transit. Viewing unmasked values requires verified supervisor authorization.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-xl bg-surface-100 border border-border space-y-2">
-            <Clock className="h-5 w-5 text-emerald-400 mb-1" />
-            <h3 className="text-xs font-bold text-ink uppercase tracking-wider">Automated Lifecycle Expiry</h3>
-            <p className="text-[11px] text-ink-soft leading-relaxed">
-              Raw document images reside in ephemeral processing memory and are scheduled for irreversible overwriting once the retention duration concludes.
-            </p>
-          </div>
-
-          <div className="p-5 rounded-xl bg-surface-100 border border-border space-y-2">
-            <FileCheck className="h-5 w-5 text-indigo-400 mb-1" />
-            <h3 className="text-xs font-bold text-ink uppercase tracking-wider">Tamper-Evident Auditing</h3>
-            <p className="text-[11px] text-ink-soft leading-relaxed">
-              Every document ingestion, PII unmasking event, report export, and central PARAKH transmission is cryptographically hashed to an immutable audit ledger.
-            </p>
-          </div>
-        </div>
-
-        {/* Configurable Retention Policy */}
-        <div className="p-6 rounded-2xl bg-surface-100 border border-border space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft pb-2 border-b border-border">
-            Organizational Document Image Retention Policy
-          </h3>
-
-          <div className="space-y-3 max-w-2xl text-xs">
-            <p className="text-ink-soft">
-              Select how long scanned image payloads are stored before automated cryptographic deletion:
-            </p>
-
-            <div className="space-y-2">
+            <fieldset className="mt-5 space-y-2">
+              <legend className="sr-only">Proposed retention duration</legend>
               {[
-                { value: "INSTANT_PURGE", label: "Instant Ephemeral Purge (Purge immediately after OCR & report synthesis)" },
-                { value: "24_HOURS", label: "24 Hours (Recommended for verification desks & hotel check-ins)" },
-                { value: "7_DAYS", label: "7 Days (Recommended for financial KYC onboarding triage)" },
-                { value: "30_DAYS", label: "30 Days (Standard enterprise security audit window)" },
-                { value: "INDEFINITE", label: "Indefinite Archiving (Requires institutional statutory justification)" },
-              ].map((opt) => (
+                {
+                  value: "INSTANT_PURGE",
+                  label: "After processing",
+                  detail: "Immediate image removal",
+                },
+                {
+                  value: "24_HOURS",
+                  label: "24 hours",
+                  detail: "Short review window",
+                },
+                {
+                  value: "7_DAYS",
+                  label: "7 days",
+                  detail: "Weekly review cycle",
+                },
+                {
+                  value: "30_DAYS",
+                  label: "30 days",
+                  detail: "Extended review window",
+                },
+                {
+                  value: "INDEFINITE",
+                  label: "Until manually removed",
+                  detail: "No proposed expiry",
+                },
+              ].map((item) => (
                 <label
-                  key={opt.value}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    retentionPolicy === opt.value
-                      ? "bg-clay-50 border-clay-400 text-ink"
-                      : "bg-surface-200 border-border text-ink-soft hover:bg-surface-50"
-                  }`}
+                  key={item.value}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3.5 ${retention === item.value ? "border-clay-300 bg-clay-50" : "border-border hover:bg-surface-100"}`}
                 >
                   <input
                     type="radio"
                     name="retention"
-                    value={opt.value}
-                    checked={retentionPolicy === opt.value}
-                    onChange={(e) => setRetentionPolicy(e.target.value)}
-                    className="accent-blue-600"
+                    value={item.value}
+                    checked={retention === item.value}
+                    onChange={(e) => setRetention(e.target.value)}
+                    className="accent-clay-600"
                   />
-                  <span>{opt.label}</span>
+                  <span className="flex flex-1 flex-wrap items-center justify-between gap-1">
+                    <span className="text-xs font-medium text-ink">
+                      {item.label}
+                    </span>
+                    <span className="text-[11px] text-ink-soft">
+                      {item.detail}
+                    </span>
+                  </span>
                 </label>
               ))}
-            </div>
-
-            <button
-              onClick={() => alert(`Retention policy updated to: ${retentionPolicy}`)}
-              className="mt-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors"
-            >
-              Update Retention Policy
-            </button>
-          </div>
-        </div>
-
-        {/* On-Demand Document Purge Tool */}
-        <div className="p-6 rounded-2xl bg-surface-100 border border-border space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-border">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-400 flex items-center gap-2">
-              <Trash2 className="h-4 w-4 text-rose-400" />
-              <span>On-Demand Permanent Document Purge</span>
-            </h3>
-            <span className="text-[10px] font-mono text-ink-faint">Irreversible Action</span>
-          </div>
-
-          <form onSubmit={handleManualPurge} className="space-y-3 max-w-xl text-xs">
-            <p className="text-ink-soft">
-              Provide the Screening ID (e.g. <span className="font-mono text-ink-soft">TR-2026-89012</span>) to immediately overwrite and delete stored document payloads:
+            </fieldset>
+          </section>
+          <section className="h-fit rounded-2xl border border-rose-100 bg-white p-6 sm:p-7">
+            <span className="inline-flex rounded-xl bg-rose-50 p-2.5 text-rose-600">
+              <Trash2 className="h-4 w-4" />
+            </span>
+            <h2 className="mt-5 font-display text-lg font-semibold text-ink">
+              Purge an original image
+            </h2>
+            <p className="mt-3 text-xs leading-6 text-ink-soft">
+              Administrator access is required. The original screening image is
+              permanently removed. OCR, extracted fields, metadata and selfies
+              are retained.
             </p>
-
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={purgeSessionId}
-                onChange={(e) => setPurgeSessionId(e.target.value)}
-                placeholder="TR-2026-XXXXX"
-                className="flex-1 px-3 py-2 rounded-lg bg-surface-200 border border-border text-ink font-mono focus:outline-none focus:border-rose-500"
-              />
+            <form onSubmit={purge} className="mt-6 space-y-5">
+              <label
+                htmlFor="purge-reference"
+                className="block text-xs font-medium text-ink-soft"
+              >
+                Screening reference
+                <input
+                  id="purge-reference"
+                  required
+                  value={reference}
+                  onChange={(e) => {
+                    setReference(e.target.value);
+                    setConfirmed(false);
+                  }}
+                  placeholder="Screening ID or record ID"
+                  disabled={busy}
+                  className="mt-2 w-full rounded-xl border border-border bg-white px-3.5 py-3 font-mono text-sm text-ink outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-50 disabled:opacity-50"
+                />
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-rose-50 p-4">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                  disabled={busy}
+                  className="mt-0.5 accent-rose-600"
+                />
+                <span className="text-xs leading-5 text-rose-600">
+                  I understand that this permanently removes the original image
+                  and cannot be undone.
+                </span>
+              </label>
               <button
                 type="submit"
-                disabled={isPurging}
-                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold transition-colors"
+                disabled={!confirmed || !reference.trim() || busy}
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-xs font-semibold text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {isPurging ? "Purging..." : "Purge Document"}
+                {busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                {busy ? "Purging image…" : "Permanently purge image"}
               </button>
+            </form>
+            {message && (
+              <div
+                role={error ? "alert" : "status"}
+                className={`mt-5 flex items-start gap-2 rounded-xl border p-3 text-xs leading-5 ${error ? "border-rose-100 bg-rose-50 text-rose-600" : "border-sage-200 bg-sage-50 text-sage-600"}`}
+              >
+                {error ? (
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                )}
+                <p>{message}</p>
+              </div>
+            )}
+            <div className="mt-7 flex items-start gap-2 border-t border-border pt-5 text-xs leading-5 text-ink-soft">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-clay-600" />
+              <p>
+                Check the reference carefully. The server verifies your role and
+                organization before permitting a purge.
+              </p>
             </div>
-          </form>
+          </section>
         </div>
       </div>
     </AppShell>

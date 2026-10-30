@@ -1,137 +1,199 @@
 "use client";
-
-import React, { useState } from "react";
+import React from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
+import { ROLE_PERMISSIONS, UserRole } from "@/lib/auth/roles";
 import {
-  Users,
-  Shield,
-  UserPlus,
-  Key,
-  CheckCircle2,
-  Lock,
+  ScanLine,
+  SearchCheck,
+  ClipboardCheck,
+  ShieldCheck,
+  Check,
+  Minus,
+  ArrowUpRight,
 } from "lucide-react";
-
+const roles: {
+  role: UserRole;
+  title: string;
+  description: string;
+  icon: typeof ScanLine;
+}[] = [
+  {
+    role: "OPERATOR",
+    title: "Operator",
+    description: "Capture documents and prepare screening records.",
+    icon: ScanLine,
+  },
+  {
+    role: "INVESTIGATOR",
+    title: "Investigator",
+    description: "Inspect anomaly signals and prepare evidence handoffs.",
+    icon: SearchCheck,
+  },
+  {
+    role: "REVIEWER",
+    title: "Reviewer",
+    description:
+      "Review findings and request justified access to sensitive fields.",
+    icon: ClipboardCheck,
+  },
+  {
+    role: "ADMINISTRATOR",
+    title: "Administrator",
+    description:
+      "Manage credentials, inspect audit records and purge original images.",
+    icon: ShieldCheck,
+  },
+];
+const capabilities = [
+  { label: "Create & read screenings", permission: "screenings:create" },
+  { label: "View & export reports", permission: "reports:export" },
+  { label: "Inspect forensic signals", permission: "forensics:view" },
+  { label: "Biometric review access", permission: "biometrics:analyze" },
+  { label: "Dispatch evidence", permission: "parakh:dispatch" },
+  { label: "Request PII unmasking", permission: "pii:unmask" },
+  { label: "Purge document images", permission: "screenings:delete" },
+  { label: "Manage API keys", permission: "api_keys:manage" },
+];
 export default function TeamPage() {
-  const members = [
-    {
-      name: "Vikramaditya Rao",
-      email: "admin@parakh-intel.org",
-      role: "ADMINISTRATOR",
-      desc: "Full administrative governance, API credential generation, retention management.",
-    },
-    {
-      name: "Dr. Ananya Sen",
-      email: "reviewer@parakh-intel.org",
-      role: "REVIEWER",
-      desc: "Authorized to triage flagged screenings and temporarily unmask sensitive PII.",
-    },
-    {
-      name: "Rajeshwar Chauhan",
-      email: "investigator@parakh-intel.org",
-      role: "INVESTIGATOR",
-      desc: "In-depth forensic anomaly analysis and PARAKH intelligence handoff operations.",
-    },
-    {
-      name: "Neil Mhatre",
-      email: "operator@parakh-intel.org",
-      role: "OPERATOR",
-      desc: "Front-desk document scanning, camera capture, and preliminary verification triage.",
-    },
-  ];
-
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
-              Operational Personnel & Role Access Control
-            </h1>
-            <p className="text-xs text-ink-soft mt-0.5">
-              Role-based authorization hierarchy (RBAC) governing screening access and PII unmasking privileges.
+      <div className="mx-auto max-w-7xl space-y-8">
+        <header>
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-clay-600">
+            Governance / Access
+          </p>
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+                The right access. For every role.
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
+                A reference to the platform’s declared role permissions. Your
+                role is assigned to your account.
+              </p>
+            </div>
+            <span className="w-fit rounded-full border border-border bg-white px-3 py-1.5 text-[11px] text-ink-soft">
+              Permission reference
+            </span>
+          </div>
+        </header>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {roles.map(({ role, title, description, icon: Icon }, index) => (
+            <section
+              key={role}
+              className="rounded-2xl border border-border bg-white p-6"
+            >
+              <div className="flex items-center justify-between">
+                <span className="rounded-xl bg-clay-50 p-2.5 text-clay-600">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="font-mono text-[11px] text-ink-faint">
+                  0{index + 1}
+                </span>
+              </div>
+              <h2 className="mt-6 font-display text-lg font-semibold text-ink">
+                {title}
+              </h2>
+              <p className="mt-2 min-h-[60px] text-xs leading-5 text-ink-soft">
+                {description}
+              </p>
+              <div className="mt-5 flex items-center justify-between border-t border-border pt-4 text-xs">
+                <span className="text-ink-faint">Declared permissions</span>
+                <span className="font-mono font-medium text-ink">
+                  {ROLE_PERMISSIONS[role].length}
+                </span>
+              </div>
+            </section>
+          ))}
+        </div>
+        <section className="overflow-hidden rounded-2xl border border-border bg-white">
+          <div className="border-b border-border p-6 sm:p-7">
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Capability matrix
+            </h2>
+            <p className="mt-2 text-xs leading-5 text-ink-soft">
+              Permission definitions from the application’s role map. Individual
+              endpoints also enforce their own authorization checks.
             </p>
           </div>
-        </div>
-
-        {/* Roles Permission Matrix Card */}
-        <div className="p-6 rounded-2xl bg-surface-100 border border-border space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft pb-2 border-b border-border">
-            Institutional Role Permissions Matrix
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            <div className="p-4 rounded-xl bg-surface-200 border border-border space-y-2">
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800">
-                OPERATOR
-              </span>
-              <p className="text-ink-soft font-semibold mt-1">Verification Desk</p>
-              <ul className="text-[11px] text-ink-soft space-y-1">
-                <li>&bull; Ingest and scan documents</li>
-                <li>&bull; View masked OCR outputs</li>
-                <li>&bull; Export basic verification summary</li>
-              </ul>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface-200 border border-border space-y-2">
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800">
-                INVESTIGATOR
-              </span>
-              <p className="text-ink-soft font-semibold mt-1">Forensic Analysis</p>
-              <ul className="text-[11px] text-ink-soft space-y-1">
-                <li>&bull; Inspect anomaly bounding boxes</li>
-                <li>&bull; Biometric similarity matching</li>
-                <li>&bull; Dispatch to PARAKH Hub</li>
-              </ul>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface-200 border border-border space-y-2">
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">
-                REVIEWER
-              </span>
-              <p className="text-ink-soft font-semibold mt-1">Supervisor Triage</p>
-              <ul className="text-[11px] text-ink-soft space-y-1">
-                <li>&bull; Triage Review-Required cases</li>
-                <li>&bull; Authorized PII unmasking</li>
-                <li>&bull; Override classification types</li>
-              </ul>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface-200 border border-border space-y-2">
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
-                ADMINISTRATOR
-              </span>
-              <p className="text-ink-soft font-semibold mt-1">System Governance</p>
-              <ul className="text-[11px] text-ink-soft space-y-1">
-                <li>&bull; Full system & audit log access</li>
-                <li>&bull; Manage API keys & gateways</li>
-                <li>&bull; Data retention policy controls</li>
-              </ul>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-left text-xs">
+              <caption className="sr-only">
+                Declared permissions by platform role
+              </caption>
+              <thead className="bg-surface-100 text-ink-soft">
+                <tr>
+                  <th scope="col" className="px-6 py-4 font-medium">
+                    Capability
+                  </th>
+                  {roles.map((item) => (
+                    <th
+                      scope="col"
+                      key={item.role}
+                      className="px-4 py-4 text-center font-medium"
+                    >
+                      {item.title}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {capabilities.map((item) => (
+                  <tr
+                    key={item.permission}
+                    className="transition hover:bg-surface-100"
+                  >
+                    <th scope="row" className="px-6 py-4 font-medium text-ink">
+                      {item.label}
+                    </th>
+                    {roles.map(({ role }) => (
+                      <td key={role} className="px-4 py-4 text-center">
+                        {ROLE_PERMISSIONS[role].includes(item.permission) ? (
+                          <span className="inline-flex rounded-full bg-sage-50 p-1 text-sage-600">
+                            <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span className="sr-only">Allowed</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex text-ink-faint">
+                            <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span className="sr-only">Not declared</span>
+                          </span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        {/* Members Directory */}
-        <div className="p-5 rounded-xl bg-surface-100 border border-border space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft pb-2 border-b border-border">
-            Registered Institutional Operators
-          </h3>
-
-          <div className="divide-y divide-border/60">
-            {members.map((m, idx) => (
-              <div key={idx} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-ink">{m.name}</span>
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded font-bold bg-blue-950 text-blue-400 border border-blue-800">
-                      {m.role}
-                    </span>
-                  </div>
-                  <p className="font-mono text-ink-soft text-[11px]">{m.email}</p>
-                  <p className="text-ink-faint text-[11px]">{m.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+        </section>
+        <div className="grid gap-5 md:grid-cols-2">
+          <section className="rounded-2xl border border-border bg-white p-6">
+            <h2 className="text-sm font-semibold text-ink">Team directory</h2>
+            <p className="mt-3 text-xs leading-6 text-ink-soft">
+              A live member directory and account-management controls are not
+              connected in this workspace. No demonstration identities are
+              presented as current personnel.
+            </p>
+          </section>
+          <section className="rounded-2xl border border-clay-200 bg-clay-50 p-6">
+            <h2 className="text-sm font-semibold text-clay-800">
+              Access is accountable
+            </h2>
+            <p className="mt-3 text-xs leading-6 text-clay-800">
+              Sensitive-field reveal requires an operational justification.
+              Audit access is available to authorized reviewers and
+              administrators.
+            </p>
+            <Link
+              href="/activity"
+              className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-clay-800"
+            >
+              Open activity records
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </section>
         </div>
       </div>
     </AppShell>

@@ -1,0 +1,120 @@
+/* Occasional pointer interactions: feedback and spatial continuity.
+   Keyboard navigation and frequently used command search remain immediate. */
+html[data-input="pointer"] .dialog-panel[data-state="open"] {
+  animation: dialog-enter 220ms var(--ease);
+}
+html[data-input="pointer"] .dialog-panel[data-state="closed"] {
+  animation: dialog-exit 160ms var(--ease);
+}
+html[data-input="pointer"] .dialog-backdrop[data-state="open"] {
+  animation: surface-fade-in 220ms var(--ease);
+}
+html[data-input="pointer"] .dialog-backdrop[data-state="closed"] {
+  animation: surface-fade-out 160ms var(--ease);
+}
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes dialog-exit {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+}
+@keyframes surface-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes surface-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.workspace-drawer {
+  transform: translateX(-100%);
+}
+.workspace-drawer[open] {
+  transform: translateX(0);
+}
+html[data-input="pointer"] .workspace-drawer {
+  transition:
+    transform 240ms var(--ease-drawer),
+    display 240ms allow-discrete,
+    overlay 240ms allow-discrete;
+}
+@starting-style {
+  html[data-input="pointer"] .workspace-drawer[open] {
+    transform: translateX(-100%);
+  }
+}
+
+.landing-signin,
+.workspace-primary,
+.app-main button:not([role="tab"]),
+.pressable {
+  transition-property: color, background-color, border-color, transform;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease);
+}
+html[data-input="pointer"]
+  :is(
+    .landing-button,
+    .landing-signin,
+    .workspace-primary,
+    .app-main button:not([role="tab"]),
+    .pressable
+  ):not(:disabled):active {
+  transform: scale(0.98);
+}
+.capability-link svg {
+  transition: transform 150ms var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .capability-link:hover svg {
+    transform: translate(2px, -2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-input="pointer"] .dialog-panel[data-state="open"],
+  html[data-input="pointer"] .dialog-backdrop[data-state="open"] {
+    animation: surface-fade-in 100ms ease;
+  }
+  html[data-input="pointer"] .dialog-panel[data-state="closed"],
+  html[data-input="pointer"] .dialog-backdrop[data-state="closed"] {
+    animation: surface-fade-out 80ms ease;
+  }
+  html[data-input="pointer"] .workspace-drawer {
+    transition: none;
+  }
+  html[data-input="pointer"]
+    :is(
+      .landing-button,
+      .landing-signin,
+      .workspace-primary,
+      .app-main button:not([role="tab"]),
+      .pressable
+    ):not(:disabled):active,
+  .capability-link:hover svg {
+    transform: none;
+  }
+}

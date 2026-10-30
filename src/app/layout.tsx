@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import "./motion.css";
+import { AppProviders } from "@/components/providers/AppProviders";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -16,9 +18,9 @@ const display = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "PARAKH Document Intelligence | Enterprise Verification Platform",
+  title: "PARAKH | Evidence. Intelligence. Clarity.",
   description:
-    "Secure identity document scanning, optical character recognition, forensic analysis, and verification platform for authorized organizations.",
+    "Institutional application scrutiny and document intelligence. Evidence-led compliance review with human oversight.",
 };
 
 export default function RootLayout({
@@ -29,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${display.variable}`}>
       <body className="bg-background text-ink min-h-screen antialiased selection:bg-clay-200 selection:text-clay-900">
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

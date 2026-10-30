@@ -1,535 +1,737 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
-  Shield,
-  Scan,
-  CheckCircle2,
-  Lock,
+  ArrowDown,
   ArrowRight,
-  FileCheck,
-  X,
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  FileCheck2,
+  FileSearch,
+  Fingerprint,
+  GraduationCap,
+  Layers3,
+  Loader2,
+  LockKeyhole,
   Menu,
+  ScanLine,
+  Shield,
+  ShieldCheck,
+  Workflow,
 } from "lucide-react";
+import { Dialog } from "@/components/ui/Dialog";
+import { BorderBeam } from "@/components/ui/BorderBeam";
+import { useSession } from "@/components/providers/SessionProvider";
 
-const LANDING_NAV_LINKS = [
-  { href: "#platform", label: "Platform" },
-  { href: "/scanner", label: "Document Scanner" },
-  { href: "/verification", label: "Verification" },
-  { href: "/reports", label: "Reports" },
-  { href: "/activity", label: "Activity" },
-  { href: "/api-access", label: "API" },
-  { href: "/security", label: "Security" },
+const stages = [
+  {
+    name: "Collect evidence",
+    icon: Layers3,
+    title: "Every case starts with evidence.",
+    description:
+      "Bring institutional records, declarations and supporting documents into one case. Category-specific checklists keep the submission grounded in what matters.",
+    items: [
+      "Four institutional application categories",
+      "Document metadata and duplicate checks",
+      "Image OCR with explicit PDF manual review",
+    ],
+    href: "/applications",
+    action: "Explore applications",
+  },
+  {
+    name: "Find the signals",
+    icon: FileSearch,
+    title: "Turn documents into understanding.",
+    description:
+      "Extract text, compare declared records and surface inconsistencies. Explainable findings keep the reasoning visible, so reviewers can inspect the evidence behind each signal.",
+    items: [
+      "Structured identity field extraction",
+      "Cross-document consistency findings",
+      "Clear reasons and recommended next steps",
+    ],
+    href: "/scanner",
+    action: "Open document scanner",
+  },
+  {
+    name: "Review with context",
+    icon: ShieldCheck,
+    title: "Keep human judgment at the center.",
+    description:
+      "Review deficiencies, record observations and request rectification. Unavailable sources stay visible as manual-review requirements, never assumed approvals.",
+    items: [
+      "Reviewer observations and status actions",
+      "Source verification with honest availability",
+      "Role-specific operational dashboards",
+    ],
+    href: "/dashboard",
+    action: "Explore the workspace",
+  },
+  {
+    name: "Build the dossier",
+    icon: FileCheck2,
+    title: "A clear record of the assessment.",
+    description:
+      "Bring the document manifest, regulatory findings and review context together. Export a preliminary dossier for the next stage of official scrutiny.",
+    items: [
+      "Institutional JSON dossier export",
+      "Printable identity screening reports",
+      "Document hashes and recorded audit events",
+    ],
+    href: "/reports",
+    action: "Explore reports",
+  },
 ];
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.16, 1, 0.3, 1] as const },
-});
+function Reveal({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, transform: reduced ? "none" : "translateY(16px)" }}
+      whileInView={{ opacity: 1, transform: "none" }}
+      viewport={{ once: true, amount: 0.15 }}
+      transition={{
+        duration: reduced ? 0.12 : 0.5,
+        delay: reduced ? 0 : delay,
+        ease: [0.23, 1, 0.32, 1],
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function EvidenceVisual() {
+  const reduced = useReducedMotion();
+  const sheetMotion = (transform: string, delay: number) => ({
+    initial: reduced
+      ? (false as const)
+      : { opacity: 0, transform: "translate(-50%, -40%) rotate(0deg)" },
+    whileInView: { opacity: 1, transform },
+    viewport: { once: true, amount: 0.2 },
+    transition: {
+      duration: reduced ? 0 : 0.65,
+      delay: reduced ? 0 : delay,
+      ease: [0.23, 1, 0.32, 1] as const,
+    },
+  });
+  return (
+    <div
+      className="evidence-visual"
+      aria-label="Illustration: documents organized into an advisory assessment"
+    >
+      <div className="orbital orbital-one" />
+      <div className="orbital orbital-two" />
+      <div className="orbital orbital-three" />
+      <div className="orbit-axis axis-one" />
+      <div className="orbit-axis axis-two" />
+      <motion.div
+        className="evidence-sheet sheet-back"
+        {...sheetMotion("translate(-35%, -50%) rotate(16deg)", 0.1)}
+      >
+        <div className="sheet-rule" />
+        <div className="sheet-rule short" />
+      </motion.div>
+      <motion.div
+        className="evidence-sheet sheet-middle"
+        {...sheetMotion("translate(-44%, -50%) rotate(5deg)", 0.16)}
+      >
+        <div className="sheet-rule" />
+        <div className="sheet-rule short" />
+      </motion.div>
+      <motion.div
+        className="evidence-sheet sheet-front"
+        {...sheetMotion("translate(-58%, -50%) rotate(-8deg)", 0.22)}
+      >
+        <div className="flex items-center justify-between">
+          <Shield className="h-6 w-6 text-clay-600" />
+          <span className="visual-label">EVIDENCE / 01</span>
+        </div>
+        <div className="sheet-title">
+          The details.
+          <br />
+          The bigger picture.
+        </div>
+        <div className="sheet-rule" />
+        <div className="sheet-rule" />
+        <div className="sheet-rule short" />
+        <div className="sheet-assessment">
+          <span className="flex items-center gap-2">
+            <FileSearch className="h-4 w-4" /> Advisory assessment
+          </span>
+          <ArrowUpRight className="h-4 w-4" />
+        </div>
+        <div className="sheet-footer">EVIDENCE → INTELLIGENCE → REVIEW</div>
+      </motion.div>
+      <div className="visual-coordinate coordinate-top">
+        EVIDENCE FIELD / ILLUSTRATION
+      </div>
+      <div className="visual-coordinate coordinate-bottom">
+        <span className="h-1.5 w-1.5 rounded-full bg-clay-600" /> HUMAN
+        JUDGMENT, AT THE CENTER
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
-  const [showSignInModal, setShowSignInModal] = useState(false);
-  const [showMobileNav, setShowMobileNav] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("OPERATOR");
-  const [emailInput, setEmailInput] = useState("operator@parakh-intel.org");
-  const [passwordInput, setPasswordInput] = useState("Parakh@Enterprise2026");
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useSession();
+  const [signIn, setSignIn] = useState(false);
+  const [mobileNav, setMobileNav] = useState(false);
+  const [stage, setStage] = useState(0);
+  const [animateStage, setAnimateStage] = useState(false);
+  const reduced = useReducedMotion();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const current = stages[stage];
+  const enterWorkspace = () => {
+    if (user) window.location.assign("/dashboard");
+    else setSignIn(true);
+  };
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("signin") === "true")
+      setSignIn(true);
+  }, []);
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  async function handleSignIn(event: React.FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
     try {
-      const res = await fetch("/api/auth/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailInput,
-          password: passwordInput,
-        }),
+        body: JSON.stringify({ email, password }),
       });
-      if (res.ok) {
-        window.location.href = "/dashboard";
-      } else {
-        const json = await res.json().catch(() => ({}));
-        alert(json.error || "Authentication failed. Please verify institutional credentials.");
-      }
-    } catch {
-      alert("Sign in network error.");
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok)
+        throw new Error(
+          result.error || "Please check your credentials and try again.",
+        );
+      window.location.href = "/dashboard";
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Sign in could not connect. Please try again.",
+      );
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-background text-ink selection:bg-clay-200 selection:text-clay-900">
-      {/* Top Navigation */}
-      <motion.header
-        initial={{ opacity: 0, y: -14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
-        className="border-b border-border bg-background/90 sticky top-0 z-50 backdrop-blur-md"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <motion.div
-            className="flex items-center gap-3"
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.2 }}
+    <div className="landing-page">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      <header className="landing-nav">
+        <Link href="/" aria-label="PARAKH home" className="brand-lockup">
+          <span className="brand-symbol">
+            <Shield className="h-5 w-5" />
+          </span>
+          <span>
+            PARAKH<span className="brand-caption">DOCUMENT INTELLIGENCE</span>
+          </span>
+        </Link>
+        <nav
+          className="hidden md:flex items-center gap-8"
+          aria-label="Main navigation"
+        >
+          <a href="#platform">Platform</a>
+          <a href="#workflow">How it works</a>
+          <a href="#principles">Our approach</a>
+        </nav>
+        <div className="flex items-center gap-3">
+          <button onClick={enterWorkspace} className="landing-signin">
+            {user ? "Workspace" : "Sign in"}{" "}
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => setMobileNav(true)}
+            className="md:hidden p-2"
+            aria-label="Open navigation"
           >
-            <motion.div
-              className="h-9 w-9 rounded-xl bg-clay-500 flex items-center justify-center text-white shadow-soft"
-              whileHover={{ rotate: 8, scale: 1.05 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
-            >
-              <Shield className="h-5 w-5" />
-            </motion.div>
-            <div>
-              <span className="font-display font-bold tracking-tight text-sm sm:text-base text-ink">PARAKH</span>
-              <span className="hidden sm:block text-ink-faint text-xs -mt-1 font-medium">Document Intelligence</span>
-            </div>
-          </motion.div>
-
-          <nav className="hidden lg:flex items-center gap-7 text-xs font-medium text-ink-soft">
-            {LANDING_NAV_LINKS.map((link) => (
-              <Link key={link.href} href={link.href} className="relative group py-1">
-                <span className="group-hover:text-ink transition-colors">{link.label}</span>
-                <motion.span
-                  className="absolute left-0 -bottom-0.5 h-[1.5px] w-full bg-clay-500 origin-left"
-                  initial={{ scaleX: 0 }}
-                  whileHover={{ scaleX: 1 }}
-                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
-                />
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <motion.button
-              onClick={() => setShowSignInModal(true)}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.97 }}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-white hover:bg-sand-200 border border-border text-xs font-semibold text-ink transition-colors duration-200"
-            >
-              Sign In
-            </motion.button>
-            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-              <Link
-                href="/dashboard"
-                className="px-3 sm:px-4 py-2 rounded-xl bg-clay-500 hover:bg-clay-600 text-xs font-semibold text-white shadow-soft hover:shadow-card transition-all duration-200 flex items-center gap-1.5"
-              >
-                <span className="hidden sm:inline">Operational Console</span>
-                <span className="sm:hidden">Console</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </motion.div>
-            <button
-              onClick={() => setShowMobileNav(true)}
-              aria-label="Open navigation menu"
-              className="p-2 rounded-xl text-ink-soft hover:text-ink hover:bg-sand-200 transition-colors duration-200 lg:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
-      </motion.header>
-
-      {/* Mobile nav drawer */}
-      <AnimatePresence>
-        {showMobileNav && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setShowMobileNav(false)}
-              className="fixed inset-0 z-50 bg-ink/30 backdrop-blur-sm lg:hidden"
-            />
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as const }}
-              className="fixed inset-y-0 right-0 z-50 w-72 max-w-[85vw] bg-background border-l border-border p-5 lg:hidden overflow-y-auto"
-            >
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
-                <span className="font-display font-bold text-ink text-sm">Menu</span>
-                <button
-                  onClick={() => setShowMobileNav(false)}
-                  aria-label="Close navigation menu"
-                  className="p-1.5 rounded-lg text-ink-faint hover:text-ink hover:bg-sand-200 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+      </header>
+      <main id="main-content">
+        <section className="landing-hero">
+          <div className="hero-grid" aria-hidden="true" />
+          <div className="hero-glow" aria-hidden="true" />
+          <div className="hero-content">
+            <Reveal>
+              <div className="hero-eyebrow">
+                <span /> EVIDENCE-LED. HUMAN-CENTERED.
               </div>
-              <nav className="flex flex-col gap-1">
-                {LANDING_NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setShowMobileNav(false)}
-                    className="px-3 py-2.5 rounded-xl text-sm font-medium text-ink-soft hover:text-ink hover:bg-sand-100 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Hero */}
-      <section className="relative pt-20 pb-24 overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-paper opacity-60 pointer-events-none" />
-        <motion.div
-          className="absolute -top-20 -left-16 h-72 w-72 rounded-full bg-clay-100 blur-3xl opacity-60"
-          animate={{ y: [0, 18, 0] }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute top-10 right-0 h-80 w-80 rounded-full bg-sage-100 blur-3xl opacity-50"
-          animate={{ y: [0, -22, 0] }}
-          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
-        />
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center relative z-10">
-          <motion.div
-            {...fadeUp(0)}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-clay-50 border border-clay-200 text-clay-700 text-xs font-medium mb-6"
-          >
-            <span className="h-2 w-2 rounded-full bg-clay-500 animate-pulse" />
-            <span>Authorized Enterprise Identity Screening Platform</span>
-          </motion.div>
-
-          <motion.h1
-            {...fadeUp(0.08)}
-            className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-ink max-w-4xl mx-auto leading-[1.15] text-balance"
-          >
-            Secure Document Intelligence for{" "}
-            <span className="text-clay-500">Authorized Verification</span>
-          </motion.h1>
-
-          <motion.p
-            {...fadeUp(0.16)}
-            className="mt-6 text-base sm:text-lg text-ink-soft max-w-2xl mx-auto leading-relaxed"
-          >
-            Scan, analyze and securely process identity documents with AI-powered OCR and document intelligence.
-            Engineered for hotels, financial institutions, enterprises, verification desks, and investigation teams.
-          </motion.p>
-
-          <motion.div
-            {...fadeUp(0.24)}
-            className="mt-8 flex flex-wrap items-center justify-center gap-3.5"
-          >
-            <motion.div whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.98 }}>
-              <Link
-                href="/scanner"
-                className="px-6 py-3 rounded-xl bg-clay-500 hover:bg-clay-600 text-white font-semibold text-sm shadow-card hover:shadow-lift transition-all duration-200 flex items-center gap-2"
+            </Reveal>
+            <Reveal delay={0.08}>
+              <h1>
+                Clarity before
+                <br />
+                every <span>decision.</span>
+              </h1>
+            </Reveal>
+            <Reveal delay={0.16}>
+              <p className="hero-description">
+                From complex documents to considered decisions. A unified
+                workspace for institutional compliance and identity
+                intelligence.
+              </p>
+            </Reveal>
+            <Reveal delay={0.24} className="hero-actions">
+              <button
+                className="landing-button primary"
+                onClick={enterWorkspace}
               >
-                <Scan className="h-4 w-4" />
-                <span>Launch Document Scanner</span>
+                Enter the workspace <ArrowUpRight className="h-4 w-4" />
+              </button>
+              <a href="#workflow" className="landing-button quiet">
+                Discover the process <ArrowDown className="h-4 w-4" />
+              </a>
+            </Reveal>
+            <Reveal delay={0.3}>
+              <div className="hero-note">
+                <ShieldCheck className="h-4 w-4" /> Built for scrutiny. Designed
+                for human oversight.
+              </div>
+            </Reveal>
+          </div>
+          <div className="hero-art">
+            <EvidenceVisual />
+          </div>
+          <div className="hero-bottom">
+            <span>01 — INTELLIGENCE WITH CONTEXT</span>
+            <a href="#platform">
+              SCROLL TO EXPLORE <ArrowDown className="h-3 w-3" />
+            </a>
+          </div>
+          <div className="hero-watermark" aria-hidden="true">
+            PARAKH
+          </div>
+        </section>
+        <section className="platform-strip" aria-label="Platform capabilities">
+          <span>
+            <GraduationCap /> Institutional scrutiny
+          </span>
+          <span>
+            <ScanLine /> Document intelligence
+          </span>
+          <span>
+            <Workflow /> Explainable findings
+          </span>
+          <span>
+            <ShieldCheck /> Human oversight
+          </span>
+        </section>
+        <section id="platform" className="landing-section platform-section">
+          <Reveal className="section-heading">
+            <div className="section-kicker">THE PLATFORM / 01</div>
+            <div>
+              <h2>
+                Complex evidence.
+                <br />
+                <span>A clear way forward.</span>
+              </h2>
+              <p>
+                Two connected workspaces. One considered approach to
+                understanding the information behind every case.
+              </p>
+            </div>
+          </Reveal>
+          <div className="platform-bento">
+            <Reveal className="capability-card institutional-card">
+              <div className="card-topline">
+                <span className="card-icon">
+                  <GraduationCap />
+                </span>
+                <span>INSTITUTIONAL INTELLIGENCE</span>
+                <span className="card-index">01</span>
+              </div>
+              <h3>
+                See the whole case.
+                <br />
+                Scrutinize every detail.
+              </h3>
+              <p>
+                Category-aware checklists, evidence consistency checks and
+                preliminary compliance findings for AICTE application review.
+              </p>
+              <div
+                className="case-illustration"
+                aria-label="Institutional review workflow illustration"
+              >
+                <div className="case-illustration-heading">
+                  <span>
+                    <Layers3 className="h-4 w-4" /> Application workspace
+                  </span>
+                  <span className="illustration-tag">WORKFLOW</span>
+                </div>
+                {[
+                  "Evidence & declarations",
+                  "Regulatory findings",
+                  "Source verification",
+                  "Reviewer observations",
+                ].map((item, i) => (
+                  <div key={item} className="case-illustration-row">
+                    <span className="case-step">0{i + 1}</span>
+                    <span>{item}</span>
+                    <ChevronRight className="h-3.5 w-3.5 ml-auto" />
+                  </div>
+                ))}
+              </div>
+              <Link href="/applications" className="capability-link">
+                Explore application review <ArrowUpRight />
+              </Link>
+            </Reveal>
+            <Reveal className="capability-card identity-card" delay={0.08}>
+              <div className="card-topline">
+                <span className="card-icon">
+                  <Fingerprint />
+                </span>
+                <span>DOCUMENT INTELLIGENCE</span>
+                <span className="card-index">02</span>
+              </div>
+              <h3>
+                Read beyond
+                <br />
+                the surface.
+              </h3>
+              <p>
+                Capture identity documents, extract structured fields and
+                examine the signals that need a closer human look.
+              </p>
+              <div className="identity-illustration" aria-hidden="true">
+                <div className="scan-corner top-left" />
+                <div className="scan-corner top-right" />
+                <div className="scan-corner bottom-left" />
+                <div className="scan-corner bottom-right" />
+                <Fingerprint className="identity-print" />
+                <span>CAPTURE / EXTRACT / ASSESS</span>
+              </div>
+              <Link href="/scanner" className="capability-link">
+                Explore document screening <ArrowUpRight />
+              </Link>
+            </Reveal>
+          </div>
+          <Reveal className="platform-footnote">
+            <span>One platform, distinct assessments.</span>
+            <p>
+              Institutional compliance reflects completeness. Identity risk
+              highlights concerns. Every result is advisory.
+            </p>
+          </Reveal>
+        </section>
+        <section id="workflow" className="landing-section workflow-section">
+          <Reveal className="section-heading">
+            <div className="section-kicker">THE PROCESS / 02</div>
+            <div>
+              <h2>
+                From evidence
+                <br />
+                <span>to understanding.</span>
+              </h2>
+              <p>
+                A deliberate path from submission to scrutiny, with context
+                preserved at every step.
+              </p>
+            </div>
+          </Reveal>
+          <div
+            className="workflow-tabs"
+            role="tablist"
+            aria-label="Explore the assessment workflow"
+          >
+            {stages.map((item, index) => (
+              <button
+                id={`workflow-tab-${index}`}
+                key={item.name}
+                role="tab"
+                aria-selected={stage === index}
+                aria-controls="workflow-panel"
+                tabIndex={stage === index ? 0 : -1}
+                onClick={(event) => {
+                  setAnimateStage(event.detail > 0);
+                  setStage(index);
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    ["ArrowRight", "ArrowLeft", "Home", "End"].includes(
+                      event.key,
+                    )
+                  ) {
+                    event.preventDefault();
+                    setAnimateStage(false);
+                    const next =
+                      event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? 3
+                          : (index + (event.key === "ArrowRight" ? 1 : 3)) % 4;
+                    setStage(next);
+                    document.getElementById(`workflow-tab-${next}`)?.focus();
+                  }
+                }}
+              >
+                <span>0{index + 1}</span>
+                {item.name}
+                <item.icon className="h-4 w-4" />
+              </button>
+            ))}
+          </div>
+          <div
+            id="workflow-panel"
+            role="tabpanel"
+            aria-labelledby={`workflow-tab-${stage}`}
+            tabIndex={0}
+            className="workflow-panel"
+          >
+            <BorderBeam />
+            <motion.div
+              key={`copy-${stage}`}
+              className="workflow-panel-copy"
+              initial={
+                animateStage && !reduced
+                  ? { opacity: 0, transform: "translateY(8px)" }
+                  : false
+              }
+              animate={{ opacity: 1, transform: "none" }}
+              transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            >
+              <span className="section-kicker">
+                0{stage + 1} / {current.name.toUpperCase()}
+              </span>
+              <h3>{current.title}</h3>
+              <p>{current.description}</p>
+              <Link className="capability-link" href={current.href}>
+                {current.action}
+                <ArrowUpRight />
               </Link>
             </motion.div>
-
-            <motion.button
-              onClick={() => setShowSignInModal(true)}
-              whileHover={{ scale: 1.03, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className="px-6 py-3 rounded-xl bg-white hover:bg-sand-200 border border-border text-ink font-semibold text-sm transition-colors duration-200 flex items-center gap-2"
-            >
-              <Lock className="h-4 w-4 text-ink-faint" />
-              <span>Access Institutional Portal</span>
-            </motion.button>
-          </motion.div>
-
-          <motion.div
-            {...fadeUp(0.32)}
-            className="mt-14 pt-8 border-t border-border max-w-3xl mx-auto"
-          >
-            <p className="text-xs uppercase font-semibold tracking-wider text-ink-faint mb-4">
-              Supported Statutory Identity Standards
-            </p>
-            <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-6 text-xs text-ink-soft font-medium">
-              {["Aadhaar (UIDAI)", "PAN Card (ITD)", "Passport (ICAO 9303)", "Driving Licence", "Voter ID (EPIC)"].map(
-                (label) => (
-                  <span key={label} className="px-3 py-1.5 rounded-lg bg-white border border-border shadow-soft">
-                    {label}
-                  </span>
-                )
-              )}
+            <div className="workflow-diagram">
+              <div className="workflow-node">
+                <current.icon className="h-8 w-8" />
+                <span>{current.name}</span>
+              </div>
+              <div className="workflow-connector" />
+              <div className="workflow-checks">
+                {current.items.map((item) => (
+                  <div key={item}>
+                    <span>
+                      <Check className="h-3 w-3" />
+                    </span>
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <span className="diagram-caption">
+                PLATFORM WORKFLOW · ILLUSTRATIVE
+              </span>
             </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Pipeline */}
-      <section id="platform" className="py-20 border-b border-border bg-surface-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
-            className="text-center max-w-2xl mx-auto mb-14"
-          >
-            <h2 className="font-display text-2xl sm:text-3xl font-bold text-ink tracking-tight">
-              Enterprise Document Screening Architecture
-            </h2>
-            <p className="mt-3 text-sm text-ink-soft">
-              An end-to-end operational pipeline combining optical character recognition, structural verification,
-              forensic inspection, and explainable risk assessment.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          </div>
+        </section>
+        <section id="principles" className="landing-section principles-section">
+          <Reveal className="section-heading">
+            <div className="section-kicker">OUR APPROACH / 03</div>
+            <div>
+              <h2>
+                Intelligence you can inspect.
+                <br />
+                <span>Judgment you can own.</span>
+              </h2>
+            </div>
+          </Reveal>
+          <div className="principles-grid">
             {[
               {
-                icon: Scan,
-                tone: "clay",
-                title: "1. Capture & Image Enhancement",
-                desc: "Browser camera stream with real-time alignment framing guides, glare detection, blur estimation (Laplacian variance), and contrast normalization before OCR ingestion.",
+                icon: FileSearch,
+                title: "Reasoning, made visible.",
+                text: "Findings carry explanations and next steps. Follow the signal back to the evidence, rather than relying on an unexplained score.",
               },
               {
-                icon: FileCheck,
-                tone: "dusk",
-                title: "2. OCR & Structured Parsing",
-                desc: "Multi-provider abstraction supporting Tesseract and Cloud Vision. Automatic classification with mathematical checksum validation (Verhoeff and ICAO 9303 MRZ).",
+                icon: LockKeyhole,
+                title: "Access with purpose.",
+                text: "Role-specific workspaces and recorded review actions keep operational responsibilities clear.",
               },
               {
-                icon: Shield,
-                tone: "sage",
-                title: "3. Forensics & PARAKH Handoff",
-                desc: "Visual anomaly mapping, biometric face similarity comparison, explainable 0-100 risk scoring, and cryptographic transmission to the PARAKH intelligence ecosystem.",
+                icon: ShieldCheck,
+                title: "Honest by design.",
+                text: "Unavailable sources and manual-review requirements stay explicit. A preliminary assessment never replaces an official decision.",
               },
-            ].map((step, i) => (
-              <motion.div
-                key={step.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.55, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] as const }}
-                whileHover={{ y: -6, scale: 1.015 }}
-                className="p-6 rounded-2xl bg-white border border-border shadow-soft hover:shadow-card transition-shadow duration-300"
+            ].map((item, i) => (
+              <Reveal
+                key={item.title}
+                delay={i * 0.06}
+                className="principle-card"
               >
-                <div
-                  className={`h-10 w-10 rounded-xl flex items-center justify-center mb-4 ${
-                    step.tone === "clay"
-                      ? "bg-clay-50 text-clay-600"
-                      : step.tone === "dusk"
-                      ? "bg-dusk-50 text-dusk-600"
-                      : "bg-sage-50 text-sage-600"
-                  }`}
-                >
-                  <step.icon className="h-5 w-5" />
-                </div>
-                <h3 className="font-display text-base font-semibold text-ink">{step.title}</h3>
-                <p className="mt-2 text-xs text-ink-soft leading-relaxed">{step.desc}</p>
-              </motion.div>
+                <item.icon className="h-6 w-6" />
+                <span className="principle-number">0{i + 1}</span>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </Reveal>
             ))}
           </div>
+        </section>
+        <section className="landing-cta">
+          <div className="cta-orbit" aria-hidden="true" />
+          <Reveal>
+            <span className="section-kicker">
+              THE NEXT STEP IS A CLEARER ONE.
+            </span>
+            <h2>
+              Bring the evidence.
+              <br />
+              <span>Find the clarity.</span>
+            </h2>
+            <button onClick={enterWorkspace} className="landing-button primary">
+              Enter the workspace <ArrowUpRight className="h-4 w-4" />
+            </button>
+            <p>For authorized institutional and document review teams.</p>
+          </Reveal>
+        </section>
+      </main>
+      <footer className="landing-footer">
+        <Link className="brand-lockup" href="/">
+          <Shield className="h-5 w-5" />
+          PARAKH
+        </Link>
+        <p>Evidence. Intelligence. Clarity.</p>
+        <div>
+          <Link href="/applications">Applications</Link>
+          <Link href="/scanner">Screening</Link>
+          <Link href="/security">Privacy & access</Link>
         </div>
-      </section>
-
-      {/* Compliance */}
-      <section id="security" className="py-16 border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
-            className="p-8 rounded-3xl bg-white border border-border shadow-card grid grid-cols-1 lg:grid-cols-2 gap-8 items-center"
-          >
-            <motion.div
-              initial={{ opacity: 0, x: -16 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.55, delay: 0.1, ease: [0.16, 1, 0.3, 1] as const }}
-            >
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-clay-50 text-clay-700 text-xs font-semibold border border-clay-200 mb-3">
-                <Lock className="h-3.5 w-3.5" />
-                <span>Enterprise Data Governance</span>
-              </div>
-              <h3 className="font-display text-2xl font-bold text-ink tracking-tight">
-                Designed for Strict Regulatory &amp; PII Compliance
-              </h3>
-              <p className="mt-3 text-sm text-ink-soft leading-relaxed">
-                Personal identifiable information (PII) is automatically masked across all user interfaces (e.g.,
-                Aadhaar <span className="font-mono text-ink">XXXX XXXX 1234</span>). Controlled unmasking requires
-                verified role authorization and is immutably logged to the institutional audit trail.
-              </p>
-
-              <div className="mt-6 space-y-2 text-xs text-ink-soft">
-                {[
-                  "Configurable data retention policies (instant purge or institutional archiving)",
-                  "Role-based access control (Operator, Investigator, Reviewer, Administrator)",
-                  "No storage of unmasked government identifiers without cryptographic audit seals",
-                ].map((line) => (
-                  <div key={line} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-sage-500 shrink-0" />
-                    <span>{line}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 16 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.55, delay: 0.2, ease: [0.16, 1, 0.3, 1] as const }}
-              className="bg-sand-100 p-5 rounded-2xl border border-border font-mono text-xs text-ink-soft space-y-2"
-            >
-              <div className="flex items-center justify-between pb-2 border-b border-border text-ink-faint">
-                <span>SECURITY AUDIT STREAM</span>
-                <span className="text-sage-600">ACTIVE LOGGING</span>
-              </div>
-              <p>
-                <span className="text-clay-600">[2026-09-15T09:18:22Z]</span> SCREENING_PROCESSED: UID Verhoeff
-                checksum verified.
-              </p>
-              <p>
-                <span className="text-clay-600">[2026-09-15T09:18:24Z]</span> PII_MASK: Aadhaar displayed as XXXX
-                XXXX 3841.
-              </p>
-              <p>
-                <span className="text-clay-600">[2026-09-15T09:18:30Z]</span> PARAKH_HANDOFF: Cryptographic hash
-                7f9a2d... queued.
-              </p>
-              <p className="text-sage-600">
-                <span className="text-clay-600">[2026-09-15T09:18:32Z]</span> RETENTION_DAEMON: Ephemeral buffer
-                cleared.
-              </p>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <motion.footer
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-40px" }}
-        transition={{ duration: 0.6 }}
-        className="py-10 bg-surface-100 text-ink-faint text-xs"
+        <span className="footer-disclaimer">
+          Preliminary decision support. Final authority rests with the competent
+          scrutiny committee.
+        </span>
+      </footer>
+      <Dialog
+        open={signIn}
+        onOpenChange={setSignIn}
+        title="Welcome to PARAKH"
+        description="Sign in with your authorized institutional credentials."
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <Shield className="h-4 w-4 text-clay-500" />
-            <span className="font-semibold text-ink-soft">PARAKH Document Intelligence</span>
-            <span>&mdash; Enterprise Verification Platform</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <Link href="/security" className="hover:text-ink">Security & Privacy</Link>
-            <Link href="/api-access" className="hover:text-ink">API Documentation</Link>
-            <Link href="/dashboard" className="hover:text-ink">Console</Link>
-          </div>
-        </div>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 mt-4 text-center sm:text-left text-[11px] text-ink-faint">
-          This system is restricted to authorized operational personnel for lawful identity screening and compliance purposes.
-        </div>
-      </motion.footer>
-
-      {/* Sign In Modal */}
-      <AnimatePresence>
-        {showSignInModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 backdrop-blur-sm p-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 14, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.97 }}
-              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
-              className="w-full max-w-md bg-white border border-border rounded-3xl p-6 shadow-lift space-y-5"
+        <form onSubmit={handleSignIn} className="space-y-5">
+          <div>
+            <label htmlFor="login-role" className="form-label">
+              Workspace role
+            </label>
+            <select
+              id="login-role"
+              defaultValue=""
+              onChange={(event) => {
+                if (event.target.value) {
+                  setEmail(
+                    `${event.target.value === "administrator" ? "admin" : event.target.value}@parakh-intel.org`,
+                  );
+                  // Public demo password shared by the accounts in lib/seed.ts.
+                  setPassword("Parakh@Enterprise2026");
+                  setError("");
+                }
+              }}
+              className="form-control"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-clay-500" />
-                  <h3 className="font-display font-bold text-ink text-base">Operator Authentication</h3>
-                </div>
-                <button
-                  onClick={() => setShowSignInModal(false)}
-                  className="text-ink-faint hover:text-ink transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-ink-soft mb-1">
-                    Institutional Operator ID / Email
-                  </label>
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-sand-100 border border-border text-xs text-ink placeholder-ink-faint focus:outline-none focus:border-clay-400 focus:ring-2 focus:ring-clay-100 transition-all font-mono"
-                    placeholder="operator@organization.org"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-ink-soft mb-1">Password</label>
-                  <input
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-sand-100 border border-border text-xs text-ink placeholder-ink-faint focus:outline-none focus:border-clay-400 focus:ring-2 focus:ring-clay-100 transition-all font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-ink-soft mb-1.5">
-                    Select Active Operational Role
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["OPERATOR", "INVESTIGATOR", "REVIEWER", "ADMINISTRATOR"] as const).map((role) => (
-                      <button
-                        type="button"
-                        key={role}
-                        onClick={() => {
-                          setSelectedRole(role);
-                          setEmailInput(
-                            role === "ADMINISTRATOR" ? "admin@parakh-intel.org" : `${role.toLowerCase()}@parakh-intel.org`
-                          );
-                        }}
-                        className={`px-3 py-2 rounded-xl border text-xs font-mono font-medium transition-all duration-200 text-left ${
-                          selectedRole === role
-                            ? "bg-clay-50 border-clay-300 text-clay-700 font-bold"
-                            : "bg-sand-100 border-border text-ink-faint hover:bg-sand-200 hover:text-ink-soft"
-                        }`}
-                      >
-                        {role}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-2.5 rounded-xl bg-clay-500 hover:bg-clay-600 text-white font-semibold text-xs transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {isLoading ? "Authenticating..." : "Authorize & Enter Console"}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <option value="">Select a demo role (optional)</option>
+              {["operator", "investigator", "reviewer", "administrator"].map(
+                (role) => (
+                  <option key={role} value={role}>
+                    {role[0].toUpperCase() + role.slice(1)}
+                  </option>
+                ),
+              )}
+            </select>
+            <p className="text-xs text-ink-soft mt-2">
+              Selecting a demo role fills in its email and password. You can
+              then sign in directly.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="login-email" className="form-label">
+              Institutional email
+            </label>
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="form-control"
+              placeholder="you@institution.org"
+            />
+          </div>
+          <div>
+            <label htmlFor="login-password" className="form-label">
+              Password
+            </label>
+            <input
+              id="login-password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="form-control"
+            />
+          </div>
+          {error && (
+            <p role="alert" className="feedback-error">
+              {error}
+            </p>
+          )}
+          <button
+            disabled={loading}
+            type="submit"
+            className="workspace-primary w-full justify-center"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LockKeyhole className="h-4 w-4" />
+            )}
+            {loading ? "Signing in…" : "Sign in to workspace"}
+            <ArrowRight className="h-4 w-4 ml-auto" />
+          </button>
+        </form>
+      </Dialog>
+      <Dialog
+        open={mobileNav}
+        onOpenChange={setMobileNav}
+        title="Explore PARAKH"
+      >
+        <nav className="flex flex-col gap-2" aria-label="Mobile navigation">
+          {[
+            { href: "#platform", label: "Platform" },
+            { href: "#workflow", label: "How it works" },
+            { href: "#principles", label: "Our approach" },
+          ].map((link) => (
+            <a
+              className="p-4 rounded-xl hover:bg-sand-100 flex justify-between"
+              key={link.href}
+              href={link.href}
+              onClick={() => setMobileNav(false)}
+            >
+              {link.label}
+              <ArrowUpRight className="h-4 w-4" />
+            </a>
+          ))}
+        </nav>
+      </Dialog>
     </div>
   );
 }

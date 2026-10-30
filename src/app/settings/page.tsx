@@ -1,211 +1,276 @@
 "use client";
-
 import React, { useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import {
-  Settings,
   Building2,
   Cpu,
-  Sliders,
-  Check,
-  Shield,
+  SlidersHorizontal,
+  ArrowUpRight,
+  Info,
+  RotateCcw,
 } from "lucide-react";
-
+const field =
+  "mt-2 w-full rounded-xl border border-border bg-white px-3.5 py-3 text-sm text-ink outline-none focus:border-clay-500 focus:ring-4 focus:ring-clay-100";
 export default function SettingsPage() {
-  const [orgName, setOrgName] = useState("Apex Verification & Identity Operations Hub");
-  const [orgCode, setOrgCode] = useState("APEX-VERIF-HQ-09");
-  const [ocrProvider, setOcrProvider] = useState("TESSERACT");
-  const [lowRiskThreshold, setLowRiskThreshold] = useState("25");
-  const [highRiskThreshold, setHighRiskThreshold] = useState("65");
-  const [allowPiiUnmask, setAllowPiiUnmask] = useState(true);
-  const [enableBiometrics, setEnableBiometrics] = useState(true);
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-  };
-
+  const [organization, setOrganization] = useState("");
+  const [code, setCode] = useState("");
+  const [provider, setProvider] = useState("TESSERACT");
+  const [low, setLow] = useState(25);
+  const [high, setHigh] = useState(66);
+  const [feedback, setFeedback] = useState("");
+  const invalid = low >= high;
   return (
     <AppShell>
-      <div className="space-y-6 max-w-4xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">
-              Organization & Screening Preferences
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-clay-600">
+              Workspace / Preferences
+            </p>
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              A workspace that fits.
             </h1>
-            <p className="text-xs text-ink-soft mt-0.5">
-              Configure institutional entity profile, OCR engine providers, and operational risk thresholds.
+            <p className="mt-3 max-w-xl text-sm leading-6 text-ink-soft">
+              Explore organization and screening preferences in a local
+              configuration preview.
             </p>
           </div>
+          <span className="w-fit rounded-full border border-border bg-white px-3 py-1.5 text-[11px] text-ink-soft">
+            Local preview
+          </span>
+        </header>
+        <div className="flex items-start gap-3 rounded-2xl border border-clay-200 bg-clay-50 p-4 text-sm leading-6 text-clay-800">
+          <Info className="mt-1 h-4 w-4 shrink-0" />
+          <p>
+            These controls do not change your organization, OCR provider, or
+            scoring engine. Values stay on this page and reset when you leave.
+          </p>
         </div>
-
-        {saved && (
-          <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800 text-xs text-emerald-300 flex items-center gap-2 animate-in fade-in">
-            <Check className="h-4 w-4" />
-            <span>Organization preferences saved successfully.</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSave} className="space-y-6">
-          {/* Institutional Entity Profile */}
-          <div className="p-6 rounded-2xl bg-surface-100 border border-border space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft pb-2 border-b border-border flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-blue-400" />
-              <span>Institutional Entity Profile</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="block text-ink-soft font-semibold mb-1">
-                  Organization Legal Name
-                </label>
-                <input
-                  type="text"
-                  value={orgName}
-                  onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-surface-200 border border-border text-ink focus:outline-none focus:border-blue-500"
-                />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!invalid)
+              setFeedback(
+                "Local preview updated. No deployment settings were changed.",
+              );
+          }}
+          className="grid gap-6 lg:grid-cols-[1fr_300px]"
+        >
+          <div className="space-y-5">
+            <section className="rounded-2xl border border-border bg-white p-6 sm:p-7">
+              <div className="mb-6 flex items-center gap-3">
+                <span className="rounded-xl bg-clay-50 p-2.5 text-clay-600">
+                  <Building2 className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="font-display text-base font-semibold text-ink">
+                    Organization profile
+                  </h2>
+                  <p className="mt-1 text-xs text-ink-soft">
+                    Draft your workspace identity.
+                  </p>
+                </div>
               </div>
-
-              <div>
-                <label className="block text-ink-soft font-semibold mb-1">
-                  Authority Code (PARAKH Link)
+              <div className="grid gap-5 sm:grid-cols-2">
+                <label
+                  htmlFor="preview-org"
+                  className="text-xs font-medium text-ink-soft"
+                >
+                  Organization name
+                  <input
+                    id="preview-org"
+                    value={organization}
+                    onChange={(e) => setOrganization(e.target.value)}
+                    placeholder="Your institution or organization"
+                    className={field}
+                  />
                 </label>
-                <input
-                  type="text"
-                  value={orgCode}
-                  onChange={(e) => setOrgCode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-surface-200 border border-border text-ink font-mono focus:outline-none focus:border-blue-500"
-                />
+                <label
+                  htmlFor="preview-code"
+                  className="text-xs font-medium text-ink-soft"
+                >
+                  Authority code
+                  <input
+                    id="preview-code"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="Organization reference"
+                    className={`${field} font-mono`}
+                  />
+                </label>
               </div>
-            </div>
-          </div>
-
-          {/* Engine & Provider Abstraction Settings */}
-          <div className="p-6 rounded-2xl bg-surface-100 border border-border space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft pb-2 border-b border-border flex items-center gap-2">
-              <Cpu className="h-4 w-4 text-indigo-400" />
-              <span>Optical Character Recognition (OCR) Engine</span>
-            </h3>
-
-            <div className="space-y-3 text-xs">
-              <p className="text-ink-soft">
-                Select the primary character recognition provider. Fallback to Tesseract local occurs automatically if cloud APIs fail:
+            </section>
+            <section className="rounded-2xl border border-border bg-white p-6 sm:p-7">
+              <div className="mb-6 flex items-center gap-3">
+                <span className="rounded-xl bg-clay-50 p-2.5 text-clay-600">
+                  <Cpu className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="font-display text-base font-semibold text-ink">
+                    Recognition provider
+                  </h2>
+                  <p className="mt-1 text-xs text-ink-soft">
+                    Supported engines, shown for planning.
+                  </p>
+                </div>
+              </div>
+              <fieldset>
+                <legend className="sr-only">Preview OCR provider</legend>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    {
+                      value: "TESSERACT",
+                      title: "Tesseract",
+                      detail: "Local English and Hindi recognition",
+                    },
+                    {
+                      value: "GOOGLE_CLOUD_VISION",
+                      title: "Google Cloud Vision",
+                      detail: "Requires a configured cloud API key",
+                    },
+                  ].map((item) => (
+                    <label
+                      key={item.value}
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 ${provider === item.value ? "border-clay-300 bg-clay-50" : "border-border hover:bg-surface-100"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="provider"
+                        value={item.value}
+                        checked={provider === item.value}
+                        onChange={(e) => setProvider(e.target.value)}
+                        className="mt-1 accent-clay-600"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-ink">
+                          {item.title}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-ink-soft">
+                          {item.detail}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </section>
+            <section className="rounded-2xl border border-border bg-white p-6 sm:p-7">
+              <div className="mb-6 flex items-center gap-3">
+                <span className="rounded-xl bg-clay-50 p-2.5 text-clay-600">
+                  <SlidersHorizontal className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="font-display text-base font-semibold text-ink">
+                    Identity risk thresholds
+                  </h2>
+                  <p className="mt-1 text-xs text-ink-soft">
+                    Higher scores indicate greater screening risk.
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <label
+                  htmlFor="preview-low"
+                  className="text-xs font-medium text-ink-soft"
+                >
+                  Low risk maximum
+                  <input
+                    id="preview-low"
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={low}
+                    onChange={(e) => setLow(Number(e.target.value))}
+                    className={field}
+                    aria-describedby="threshold-note"
+                  />
+                </label>
+                <label
+                  htmlFor="preview-high"
+                  className="text-xs font-medium text-ink-soft"
+                >
+                  High risk starts at
+                  <input
+                    id="preview-high"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={high}
+                    onChange={(e) => setHigh(Number(e.target.value))}
+                    className={field}
+                    aria-describedby="threshold-note"
+                  />
+                </label>
+              </div>
+              <p
+                id="threshold-note"
+                className={`mt-4 text-xs leading-5 ${invalid ? "text-rose-600" : "text-ink-soft"}`}
+              >
+                {invalid
+                  ? "High risk must start above the low risk maximum."
+                  : "Current engine: 0–25 low risk, 26–65 review required, 66–100 high risk. This preview does not change those boundaries."}
               </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { id: "TESSERACT", name: "Tesseract Local", note: "Air-gapped / High Privacy" },
-                  { id: "GOOGLE_CLOUD_VISION", name: "Google Cloud Vision", note: "Cloud Neural API" },
-                  { id: "AZURE_DOC_AI", name: "Azure Doc Intelligence", note: "Enterprise Cloud" },
-                ].map((p) => (
-                  <button
-                    type="button"
-                    key={p.id}
-                    onClick={() => setOcrProvider(p.id)}
-                    className={`p-3 rounded-xl border text-left transition-colors ${
-                      ocrProvider === p.id
-                        ? "bg-clay-50 border-clay-400 text-ink"
-                        : "bg-surface-200 border-border text-ink-soft hover:bg-surface-50"
-                    }`}
-                  >
-                    <span className="font-bold block text-xs">{p.name}</span>
-                    <span className="text-[10px] text-ink-faint">{p.note}</span>
-                  </button>
-                ))}
-              </div>
+            </section>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={invalid}
+                className="rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white hover:bg-clay-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Update local preview
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOrganization("");
+                  setCode("");
+                  setProvider("TESSERACT");
+                  setLow(25);
+                  setHigh(66);
+                  setFeedback("Preview reset.");
+                }}
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink-soft hover:bg-surface-100"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset
+              </button>
             </div>
+            <p role="status" className="text-sm text-ink-soft">
+              {feedback}
+            </p>
           </div>
-
-          {/* Risk Scoring Thresholds */}
-          <div className="p-6 rounded-2xl bg-surface-100 border border-border space-y-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft pb-2 border-b border-border flex items-center gap-2">
-              <Sliders className="h-4 w-4 text-emerald-400" />
-              <span>Risk Scoring Thresholds</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="block text-ink-soft font-semibold mb-1">
-                  Low Risk Maximum Threshold (0 - 100)
-                </label>
-                <input
-                  type="number"
-                  value={lowRiskThreshold}
-                  onChange={(e) => setLowRiskThreshold(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-surface-200 border border-border text-ink font-mono focus:outline-none focus:border-blue-500"
-                />
-                <span className="text-[10px] text-ink-faint mt-0.5 block">
-                  Scores equal or below this value pass as Low Risk.
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-ink-soft font-semibold mb-1">
-                  High Risk Trigger Threshold (0 - 100)
-                </label>
-                <input
-                  type="number"
-                  value={highRiskThreshold}
-                  onChange={(e) => setHighRiskThreshold(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-surface-200 border border-border text-ink font-mono focus:outline-none focus:border-blue-500"
-                />
-                <span className="text-[10px] text-ink-faint mt-0.5 block">
-                  Scores equal or above this value trigger Flagged High Risk state.
-                </span>
-              </div>
+          <aside className="h-fit rounded-2xl border border-border bg-white p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
+              Configuration guide
+            </p>
+            <h2 className="mt-4 font-display text-lg font-semibold text-ink">
+              Clear boundaries.
+              <br />
+              Confident decisions.
+            </h2>
+            <p className="mt-4 text-xs leading-6 text-ink-soft">
+              Reviewer permissions come from your signed-in role. Facial
+              comparison currently requires manual review. Neither is changed by
+              these preferences.
+            </p>
+            <div className="mt-6 space-y-3 border-t border-border pt-5">
+              <Link
+                href="/team"
+                className="flex items-center justify-between text-xs font-medium text-ink"
+              >
+                Role permissions
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/security"
+                className="flex items-center justify-between text-xs font-medium text-ink"
+              >
+                Data & privacy
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
             </div>
-          </div>
-
-          {/* Security & Verification Toggles */}
-          <div className="p-6 rounded-2xl bg-surface-100 border border-border space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft pb-2 border-b border-border">
-              Security Governance Toggles
-            </h3>
-
-            <div className="space-y-3 text-xs">
-              <label className="flex items-center justify-between p-3 rounded-xl bg-surface-200 cursor-pointer">
-                <div>
-                  <span className="font-semibold text-ink block">Allow PII Unmasking for Reviewers</span>
-                  <span className="text-[11px] text-ink-soft">
-                    Mandatory audit justification required when unmasking Aadhaar/PAN
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={allowPiiUnmask}
-                  onChange={(e) => setAllowPiiUnmask(e.target.checked)}
-                  className="h-4 w-4 accent-blue-600 rounded"
-                />
-              </label>
-
-              <label className="flex items-center justify-between p-3 rounded-xl bg-surface-200 cursor-pointer">
-                <div>
-                  <span className="font-semibold text-ink block">Enable Biometric Facial Verification</span>
-                  <span className="text-[11px] text-ink-soft">
-                    Allows side-by-side portrait vs live selfie comparison in the screening station
-                  </span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={enableBiometrics}
-                  onChange={(e) => setEnableBiometrics(e.target.checked)}
-                  className="h-4 w-4 accent-blue-600 rounded"
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-colors"
-            >
-              Save Organization Settings
-            </button>
-          </div>
+          </aside>
         </form>
       </div>
     </AppShell>
