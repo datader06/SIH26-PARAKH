@@ -1,5 +1,9 @@
 # UI redesign: research and delivery
 
+## Subsequent OCR correction — 2026-10-30
+
+The later screenshot investigation found hardcoded extractor confidence, fixed inspection boxes and pseudo optical metrics that survived the visual redesign. These are now corrected for new analyses; the earlier delivery text must not be read as proof that they were previously measured. See the current sections of PROJECT_CONTEXT.md and UI_REDESIGN_CONTEXT.md. Added tests/ocr-evidence.test.ts and tests/ocr-pipeline-smoke.cjs. Actual local Tesseract, blank OCR rejection, override consistency, responsive results and the full existing UI smoke passed, along with types, lint, eight domain assertions and isolated direct Next build. Legacy data needs a re-scan; pixel forensics remains unavailable.
+
 Implemented 2026-10-30. Five specialized agents researched components, UI foundations, motion, Dribbble references and the repository. The main agent independently visited all nine requested resources and four specified shots using web retrieval and rendered Playwright previews, then owned integration and browser QA. No reference artwork was copied into the application.
 
 ## Main-agent inspection ledger

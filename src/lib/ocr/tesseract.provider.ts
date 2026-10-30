@@ -2,6 +2,7 @@ import { createWorker, PSM } from "tesseract.js";
 import { IOCRProvider, OCRResponse, OCRWord } from "./provider.interface";
 import path from "path";
 import fs from "fs";
+import { averageWordConfidence, roundConfidence } from "./evidence";
 
 function resolveWorkerPath(): string | undefined {
   // require.resolve() can fail to return a usable absolute path when this module
@@ -10,11 +11,21 @@ function resolveWorkerPath(): string | undefined {
   // specifier it fell back to. Resolve via process.cwd() first since that is
   // reliable in both the Next.js dev/prod server process and plain Node.
   const candidates = [
-    path.join(process.cwd(), "node_modules", "tesseract.js", "src", "worker-script", "node", "index.js"),
+    path.join(
+      process.cwd(),
+      "node_modules",
+      "tesseract.js",
+      "src",
+      "worker-script",
+      "node",
+      "index.js",
+    ),
   ];
 
   try {
-    candidates.push(require.resolve("tesseract.js/src/worker-script/node/index.js"));
+    candidates.push(
+      require.resolve("tesseract.js/src/worker-script/node/index.js"),
+    );
   } catch {
     // ignore; fall through to other candidates
   }
@@ -49,7 +60,11 @@ export class TesseractProvider implements IOCRProvider {
       // of the adjacent English text due to mixed-script layout segmentation
       // errors. Hindi is the most common pairing across demo/test documents;
       // other scheduled languages (Bengali, Tamil, etc.) remain a known gap.
-      worker = await createWorker("eng+hin", 1, workerPath ? { workerPath } : undefined);
+      worker = await createWorker(
+        "eng+hin",
+        1,
+        workerPath ? { workerPath } : undefined,
+      );
 
       // Default page segmentation assumes a single block of uniform prose,
       // which misreads ID cards badly: their text sits in scattered label/value
@@ -57,12 +72,18 @@ export class TesseractProvider implements IOCRProvider {
       // text regions independently instead of trying to force them into columns.
       await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
 
-      const ret = await worker.recognize(imageSource);
+      const ret = await worker.recognize(
+        imageSource,
+        {},
+        { text: true, blocks: true, hocr: true },
+      );
       const executionTimeMs = Date.now() - startTime;
 
       const words: OCRWord[] = (ret.data.words || []).map((w: any) => ({
         text: w.text,
-        confidence: Math.round(w.confidence || 0),
+        confidence: Number.isFinite(w.confidence)
+          ? roundConfidence(w.confidence)
+          : null,
         bbox: w.bbox
           ? {
               x: w.bbox.x0,
@@ -73,10 +94,8 @@ export class TesseractProvider implements IOCRProvider {
           : undefined,
       }));
 
-      const averageConfidence =
-        words.length > 0
-          ? Math.round(words.reduce((sum, w) => sum + w.confidence, 0) / words.length)
-          : Math.round(ret.data.confidence || 0);
+      const averageConfidence = averageWordConfidence(words);
+      const pageBox = ret.data.hocr?.match(/\bbbox\s+0\s+0\s+(\d+)\s+(\d+)/);
 
       const linesCount = ret.data.lines
         ? ret.data.lines.length
@@ -85,7 +104,12 @@ export class TesseractProvider implements IOCRProvider {
       return {
         provider: this.name,
         fullText: ret.data.text || "",
-        averageConfidence: Math.min(100, Math.max(0, averageConfidence)),
+        averageConfidence: averageConfidence ?? 0,
+        confidenceAvailable: averageConfidence !== null,
+        status: ret.data.text?.trim() ? "SUCCEEDED" : "NO_TEXT",
+        imageDimensions: pageBox
+          ? { width: Number(pageBox[1]), height: Number(pageBox[2]) }
+          : undefined,
         wordsCount: words.length,
         linesCount: linesCount,
         executionTimeMs,
@@ -98,7 +122,9 @@ export class TesseractProvider implements IOCRProvider {
       // document content — a fake success here would let any input, including
       // non-document images, sail through classification and risk scoring as valid.
       return {
-        provider: "OCR_ENGINE_UNAVAILABLE",
+        provider: this.name,
+        status: "FAILED",
+        confidenceAvailable: false,
         fullText: "",
         averageConfidence: 0,
         wordsCount: 0,

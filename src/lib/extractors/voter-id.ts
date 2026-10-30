@@ -9,7 +9,10 @@ export function maskEPIC(epic: string): string {
 
 export function extractVoterIDFields(text: string): ParsedField[] {
   const fields: ParsedField[] = [];
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   // 1. EPIC Number: 3 capital letters + 7 digits
   const epicRegex = /\b([A-Z]{3}[0-9]{7})\b/;
@@ -23,15 +26,19 @@ export function extractVoterIDFields(text: string): ParsedField[] {
       rawValue: epic,
       maskedValue: maskEPIC(epic),
       isSensitive: true,
-      confidence: 97,
+      confidence: 0,
       validationStatus: "VALID",
     });
   }
 
   // 2. Elector Name
-  const nameIdx = lines.findIndex((l) => /Elector's\s*Name|Name\s*:/i.test(l) && !/Father|Husband/i.test(l));
+  const nameIdx = lines.findIndex(
+    (l) => /Elector's\s*Name|Name\s*:/i.test(l) && !/Father|Husband/i.test(l),
+  );
   if (nameIdx !== -1) {
-    const candidate = lines[nameIdx].replace(/Elector's\s*Name|Name\s*:/i, "").trim();
+    const candidate = lines[nameIdx]
+      .replace(/Elector's\s*Name|Name\s*:/i, "")
+      .trim();
     if (candidate.length > 2) {
       fields.push({
         key: "holder_name",
@@ -39,16 +46,20 @@ export function extractVoterIDFields(text: string): ParsedField[] {
         rawValue: candidate,
         maskedValue: candidate,
         isSensitive: false,
-        confidence: 90,
+        confidence: 0,
         validationStatus: "VALID",
       });
     }
   }
 
   // 3. Relation Name (Father/Husband)
-  const relIdx = lines.findIndex((l) => /Father(?:'s)?\s*Name|Husband(?:'s)?\s*Name/i.test(l));
+  const relIdx = lines.findIndex((l) =>
+    /Father(?:'s)?\s*Name|Husband(?:'s)?\s*Name/i.test(l),
+  );
   if (relIdx !== -1) {
-    const candidate = lines[relIdx].replace(/Father(?:'s)?\s*Name|Husband(?:'s)?\s*Name\s*:/i, "").trim();
+    const candidate = lines[relIdx]
+      .replace(/Father(?:'s)?\s*Name|Husband(?:'s)?\s*Name\s*:/i, "")
+      .trim();
     if (candidate.length > 2) {
       fields.push({
         key: "relation_name",
@@ -56,7 +67,7 @@ export function extractVoterIDFields(text: string): ParsedField[] {
         rawValue: candidate,
         maskedValue: candidate,
         isSensitive: false,
-        confidence: 87,
+        confidence: 0,
         validationStatus: "VALID",
       });
     }
@@ -71,7 +82,7 @@ export function extractVoterIDFields(text: string): ParsedField[] {
       rawValue: genderMatch[1].toUpperCase(),
       maskedValue: genderMatch[1].toUpperCase(),
       isSensitive: false,
-      confidence: 94,
+      confidence: 0,
       validationStatus: "VALID",
     });
   }
@@ -84,7 +95,7 @@ export function extractVoterIDFields(text: string): ParsedField[] {
       rawValue: ageMatch[1],
       maskedValue: ageMatch[1],
       isSensitive: false,
-      confidence: 91,
+      confidence: 0,
       validationStatus: "VALID",
     });
   }

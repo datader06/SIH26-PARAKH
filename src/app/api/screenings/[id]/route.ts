@@ -4,16 +4,21 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { recordAuditLog } from "@/lib/audit/logger";
 import { hasPermission } from "@/lib/auth/roles";
 
+import { presentScreening } from "@/lib/ocr/evidence";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: "Unauthorized. Session required." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized. Session required." },
+        { status: 401 },
+      );
     }
 
     const { id } = params;
@@ -37,33 +42,51 @@ export async function GET(
     });
 
     if (!session) {
-      return NextResponse.json({ error: "Screening record not found." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Screening record not found." },
+        { status: 404 },
+      );
     }
 
-    return NextResponse.json({ success: true, data: session });
+    return NextResponse.json({
+      success: true,
+      data: presentScreening(session),
+    });
   } catch (error: any) {
     console.error("[SCREENING_GET_ERROR]", error);
-    return NextResponse.json({ error: "Failed to load screening record." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to load screening record." },
+      { status: 500 },
+    );
   }
 }
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { id } = params;
     const currentUser = await getCurrentUser();
 
     if (!currentUser) {
-      return NextResponse.json({ error: "Unauthorized. Session required." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized. Session required." },
+        { status: 401 },
+      );
     }
 
     // Role check: Strict Administrator authorization required to purge or delete records
-    if (!hasPermission(currentUser.role, "screenings:delete") && currentUser.role !== "ADMINISTRATOR") {
+    if (
+      !hasPermission(currentUser.role, "screenings:delete") &&
+      currentUser.role !== "ADMINISTRATOR"
+    ) {
       return NextResponse.json(
-        { error: "Forbidden: Administrator role required to purge screening records." },
-        { status: 403 }
+        {
+          error:
+            "Forbidden: Administrator role required to purge screening records.",
+        },
+        { status: 403 },
       );
     }
 
@@ -76,7 +99,10 @@ export async function DELETE(
     });
 
     if (!session) {
-      return NextResponse.json({ error: "Screening record not found." }, { status: 404 });
+      return NextResponse.json(
+        { error: "Screening record not found." },
+        { status: 404 },
+      );
     }
 
     // Purge document image according to retention policy
@@ -104,10 +130,14 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: "Document image purged successfully according to organizational data privacy policy.",
+      message:
+        "Document image purged successfully according to organizational data privacy policy.",
     });
   } catch (error: any) {
     console.error("[SCREENING_DELETE_ERROR]", error);
-    return NextResponse.json({ error: "Failed to purge document." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to purge document." },
+      { status: 500 },
+    );
   }
 }

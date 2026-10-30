@@ -45,10 +45,19 @@ export interface MRZParseResult {
   compositeValid: boolean;
 }
 
-export function parseMRZLines(line1: string, line2: string): MRZParseResult | null {
+export function parseMRZLines(
+  line1: string,
+  line2: string,
+): MRZParseResult | null {
   // Clean filler characters and align length
-  const l1 = line1.replace(/[^A-Z0-9<]/g, "").padEnd(44, "<").slice(0, 44);
-  const l2 = line2.replace(/[^A-Z0-9<]/g, "").padEnd(44, "<").slice(0, 44);
+  const l1 = line1
+    .replace(/[^A-Z0-9<]/g, "")
+    .padEnd(44, "<")
+    .slice(0, 44);
+  const l2 = line2
+    .replace(/[^A-Z0-9<]/g, "")
+    .padEnd(44, "<")
+    .slice(0, 44);
 
   if (!l1.startsWith("P")) return null;
 
@@ -63,7 +72,8 @@ export function parseMRZLines(line1: string, line2: string): MRZParseResult | nu
     const passportNumberRaw = l2.slice(0, 9);
     const passportNumber = passportNumberRaw.replace(/</g, "");
     const passportCheckDigit = parseInt(l2.charAt(9), 10);
-    const passportNumberValid = calculateMRZCheckDigit(passportNumberRaw) === passportCheckDigit;
+    const passportNumberValid =
+      calculateMRZCheckDigit(passportNumberRaw) === passportCheckDigit;
 
     const nationality = l2.slice(10, 13).replace(/</g, "");
 
@@ -71,7 +81,12 @@ export function parseMRZLines(line1: string, line2: string): MRZParseResult | nu
     const dobCheckDigit = parseInt(l2.charAt(19), 10);
     const dobValid = calculateMRZCheckDigit(dobRaw) === dobCheckDigit;
 
-    const sex = l2.charAt(20) === "F" ? "FEMALE" : l2.charAt(20) === "M" ? "MALE" : "UNSPECIFIED";
+    const sex =
+      l2.charAt(20) === "F"
+        ? "FEMALE"
+        : l2.charAt(20) === "M"
+          ? "MALE"
+          : "UNSPECIFIED";
 
     const expRaw = l2.slice(21, 27);
     const expCheckDigit = parseInt(l2.charAt(27), 10);
@@ -86,7 +101,13 @@ export function parseMRZLines(line1: string, line2: string): MRZParseResult | nu
       const yy = parseInt(s.slice(0, 2), 10);
       const mm = s.slice(2, 4);
       const dd = s.slice(4, 6);
-      const century = isExpiry ? (yy < 70 ? "20" : "19") : yy > 30 ? "19" : "20";
+      const century = isExpiry
+        ? yy < 70
+          ? "20"
+          : "19"
+        : yy > 30
+          ? "19"
+          : "20";
       return `${century}${s.slice(0, 2)}-${mm}-${dd}`;
     };
 
@@ -112,9 +133,15 @@ export function parseMRZLines(line1: string, line2: string): MRZParseResult | nu
   }
 }
 
-export function extractPassportFields(text: string): { fields: ParsedField[]; mrzResult: MRZParseResult | null } {
+export function extractPassportFields(text: string): {
+  fields: ParsedField[];
+  mrzResult: MRZParseResult | null;
+} {
   const fields: ParsedField[] = [];
-  const lines = text.split("\n").map((l) => l.trim().toUpperCase()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim().toUpperCase())
+    .filter(Boolean);
 
   // Search for MRZ lines
   let mrz1 = "";
@@ -141,9 +168,10 @@ export function extractPassportFields(text: string): { fields: ParsedField[]; mr
       key: "passport_number",
       label: "Passport Number",
       rawValue: mrzParsed.passportNumber,
+      sourceText: mrz2,
       maskedValue: maskPassport(mrzParsed.passportNumber),
       isSensitive: true,
-      confidence: mrzParsed.passportNumberValid ? 98 : 75,
+      confidence: 0,
       validationStatus: mrzParsed.passportNumberValid ? "VALID" : "WARNING",
     });
 
@@ -153,9 +181,10 @@ export function extractPassportFields(text: string): { fields: ParsedField[]; mr
         key: "holder_name",
         label: "Passport Holder Name",
         rawValue: fullName,
+        sourceText: mrz1,
         maskedValue: fullName,
         isSensitive: false,
-        confidence: 95,
+        confidence: 0,
         validationStatus: "VALID",
       });
     }
@@ -163,10 +192,17 @@ export function extractPassportFields(text: string): { fields: ParsedField[]; mr
     fields.push({
       key: "nationality",
       label: "Nationality",
-      rawValue: mrzParsed.nationality === "IND" ? "INDIAN (IND)" : mrzParsed.nationality,
-      maskedValue: mrzParsed.nationality === "IND" ? "INDIAN (IND)" : mrzParsed.nationality,
+      rawValue:
+        mrzParsed.nationality === "IND"
+          ? "INDIAN (IND)"
+          : mrzParsed.nationality,
+      sourceText: mrz2,
+      maskedValue:
+        mrzParsed.nationality === "IND"
+          ? "INDIAN (IND)"
+          : mrzParsed.nationality,
       isSensitive: false,
-      confidence: 96,
+      confidence: 0,
       validationStatus: "VALID",
     });
 
@@ -174,9 +210,10 @@ export function extractPassportFields(text: string): { fields: ParsedField[]; mr
       key: "dob",
       label: "Date of Birth",
       rawValue: mrzParsed.dateOfBirth,
+      sourceText: mrz2,
       maskedValue: mrzParsed.dateOfBirth,
       isSensitive: false,
-      confidence: mrzParsed.dobValid ? 95 : 70,
+      confidence: 0,
       validationStatus: mrzParsed.dobValid ? "VALID" : "WARNING",
     });
 
@@ -184,9 +221,10 @@ export function extractPassportFields(text: string): { fields: ParsedField[]; mr
       key: "gender",
       label: "Sex",
       rawValue: mrzParsed.sex,
+      sourceText: mrz2,
       maskedValue: mrzParsed.sex,
       isSensitive: false,
-      confidence: 95,
+      confidence: 0,
       validationStatus: "VALID",
     });
 
@@ -194,9 +232,10 @@ export function extractPassportFields(text: string): { fields: ParsedField[]; mr
       key: "expiry_date",
       label: "Date of Expiry",
       rawValue: mrzParsed.expirationDate,
+      sourceText: mrz2,
       maskedValue: mrzParsed.expirationDate,
       isSensitive: false,
-      confidence: mrzParsed.expirationValid ? 95 : 70,
+      confidence: 0,
       validationStatus: mrzParsed.expirationValid ? "VALID" : "WARNING",
     });
   } else {
@@ -210,7 +249,7 @@ export function extractPassportFields(text: string): { fields: ParsedField[]; mr
         rawValue: passMatch[1],
         maskedValue: maskPassport(passMatch[1]),
         isSensitive: true,
-        confidence: 84,
+        confidence: 0,
         validationStatus: "VALID",
       });
     }

@@ -56,3 +56,26 @@ Update context docs when architecture, contracts, workflows, reusable components
 - Use shared SessionProvider and the flat session organizationName contract.
 - tests/ui-redesign-smoke.cjs requires explicit isolated-database acknowledgement and loopback URL. It creates cases and runs OCR; never target production data.
 - For UI builds run Next directly or isolate data; the original build wrapper still performs a schema push with data-loss acceptance.
+
+
+## OCR evidence maintenance
+
+- New screening analysis uses the version-2 wordsJson envelope from src/lib/ocr/evidence.ts; preserve confidenceSource and word indices. Never substitute parser constants, checksum validity or classification scores for OCR confidence.
+- Existing nonnullable numeric columns use zero as an unavailable sentinel. UI/API consumers must honor confidenceSource and ocrConfidenceAvailable. Derived fields can share source-token/line evidence; that is not a calibrated identity-match score.
+- Template inspection boxes and pseudo font/layout/blur/glare metrics were removed. Pixel forensics is unavailable; keep that explicit. Legacy records lack current provenance and require re-scanning; do not silently relabel them measured.
+- Keep no-text/provider failures as explicit 422/503 responses. Type overrides must update fields, evidence, text findings and triage atomically while preserving tenant checks.
+- Focused checks: tests/ocr-evidence.test.ts; tests/ocr-pipeline-smoke.cjs requires PARAKH_UI_TEST_ISOLATED=1 and a loopback PARAKH_UI_TEST_URL with an isolated DB. It creates screenings and runs actual Tesseract; never run against production.
+
+
+## Demo inputs and cross-document scope
+
+- The scanner Aadhaar sample uses the user-supplied src/assets/demo/aadhaar-example.png through the real OCR API. Keep placeholder-ID warnings and do not substitute predefined extraction values.
+- Cross-document rules currently compare extractable institutional Permanent IDs to the declared application ID (at least two documents); they do not link standalone Aadhaar/PAN scans or compare arbitrary identity fields. Missing-ID documents are skipped, and a document containing multiple IDs currently passes if its set includes the declared ID. Date-integrity rules check entered metadata.
+- tests/fixtures/cross-document/README.md explains the video demo and original watermarked fixtures. tests/cross-document-smoke.cjs creates a case and uploads images through OCR; enforce isolated DB acknowledgement and loopback URL, never production. tests/cross-document-rules.test.ts covers matching/missing/conflicting IDs and date metadata.
+
+
+## Complete video demo kit
+
+- tests/fixtures/video-demo-pack contains a complete synthetic application pack, explicit negative-test files, manifests and ready narration. Keep profile values synchronized through scripts/generate-video-demo-pack.cjs. Preserve DEMO/unsigned notices; these are not official approvals, notarized affidavits, bank receipts or verified facilities.
+- tests/video-demo-pack-smoke.cjs runs actual OCR uploads and writes a factual VERIFICATION-RESULTS.json. Require isolated-loopback settings; never point it at production/original data. Baseline documents expire 2027-05-31; organization-wide duplicate detection means repeated fixture uploads can alter scores. Do not hardcode an always-100 result or change rules to make the demo pass.
+- PDF copies are for reading; use PNGs for this app's OCR flow. Upload dates are entered metadata. Four deliberate negatives cover wrong PID, expired metadata, impossible dates and a byte-identical duplicate.

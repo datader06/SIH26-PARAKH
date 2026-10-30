@@ -27,71 +27,89 @@ export class ScreeningAssessmentEngine {
     const reviewIndicators: string[] = [];
 
     // 1. Classification & Type Confidence
-    if (params.documentType !== "UNKNOWN" && params.classificationConfidence >= 75) {
+    if (
+      params.documentType !== "UNKNOWN" &&
+      params.classificationConfidence >= 75
+    ) {
       positiveSignals.push(
-        `Document classification verified as ${params.documentType.replace(/_/g, " ")} (${params.classificationConfidence}% confidence)`
+        `Document type inferred as ${params.documentType.replace(/_/g, " ")} (text-pattern heuristic score ${params.classificationConfidence}/100; not OCR confidence)`,
       );
     } else {
       riskPoints += 25;
-      reviewIndicators.push("Ambiguous document type classification; manual document type verification required.");
+      reviewIndicators.push(
+        "Ambiguous document type classification; manual document type verification required.",
+      );
     }
 
     // 2. Optical Character Recognition Quality
     if (params.ocrConfidence >= 80) {
-      positiveSignals.push(`High optical character recognition fidelity (${params.ocrConfidence}% OCR confidence)`);
+      positiveSignals.push(
+        `High optical character recognition fidelity (${params.ocrConfidence}% OCR confidence)`,
+      );
     } else if (params.ocrConfidence < 65) {
       riskPoints += 20;
-      reviewIndicators.push(`Sub-optimal OCR confidence (${params.ocrConfidence}%); optical illegibility in text regions`);
+      reviewIndicators.push(
+        `Low OCR recognition confidence (${params.ocrConfidence}%); review the extracted text`,
+      );
     }
 
-    // 3. Image Physical Quality
-    if (params.quality.qualityScore >= 70) {
-      positiveSignals.push(`Image sharpness and illumination meet enterprise standards (Score: ${params.quality.qualityScore}/100)`);
-    } else {
-      riskPoints += 15;
-      reviewIndicators.push(`Image quality suboptimal (Blur: ${params.quality.blurIndex}, Glare: ${params.quality.glareIndex})`);
-    }
+    reviewIndicators.push(
+      "Image tampering, font consistency, sharpness and glare were not measured. Review the original document.",
+    );
 
     // 4. Mandatory Field Presence & Checksum Validation
-    const hasSensitivePrimary = params.fields.some((f) => f.isSensitive && f.validationStatus === "VALID");
-    const warningFields = params.fields.filter((f) => f.validationStatus === "WARNING");
+    const hasSensitivePrimary = params.fields.some(
+      (f) =>
+        [
+          "aadhaar_number",
+          "pan_number",
+          "passport_number",
+          "dl_number",
+          "epic_number",
+        ].includes(f.key) && f.validationStatus === "VALID",
+    );
+    const warningFields = params.fields.filter(
+      (f) => f.validationStatus === "WARNING",
+    );
 
     if (hasSensitivePrimary) {
-      positiveSignals.push("Primary statutory identification number extracted with valid syntax and checksum");
+      positiveSignals.push(
+        "Primary identifier passed the implemented format/checksum checks; this does not verify issuance or authenticity",
+      );
     } else {
       riskPoints += 20;
-      reviewIndicators.push("Primary identification number missing or failed statutory format check");
+      reviewIndicators.push(
+        "Primary identification number missing or failed statutory format check",
+      );
     }
 
     if (warningFields.length > 0) {
       riskPoints += 10 * warningFields.length;
-      reviewIndicators.push(`${warningFields.length} field(s) require manual review due to formatting variance`);
-    }
-
-    // 5. Forensic Anomalies
-    if (!params.forensics.overallAnomalyDetected) {
-      positiveSignals.push("Visual forensics analysis: No significant structural or digital anomalies detected");
-    } else {
-      const highSeverity = params.forensics.anomalies.filter((a) => a.severity === "HIGH");
-      const modSeverity = params.forensics.anomalies.filter((a) => a.severity === "MODERATE");
-
-      riskPoints += highSeverity.length * 25 + modSeverity.length * 12;
       reviewIndicators.push(
-        `Forensic inspection identified ${params.forensics.anomalies.length} anomaly signal(s) requiring verification review`
+        `${warningFields.length} field(s) require manual review due to formatting variance`,
       );
     }
+
+    // Text validation findings are already counted above. Do not count them a
+    // second time as unimplemented pixel-level forensic evidence.
 
     // 6. Optional Biometric Face Comparison
     if (params.face) {
       if (params.face.matchStatus === "MATCH") {
-        positiveSignals.push(`Biometric facial similarity confirmed (${params.face.similarityScore}% match score)`);
+        positiveSignals.push(
+          `Biometric facial similarity confirmed (${params.face.similarityScore}% match score)`,
+        );
         riskPoints = Math.max(0, riskPoints - 10);
       } else if (params.face.matchStatus === "REVIEW_REQUIRED") {
         riskPoints += 15;
-        reviewIndicators.push(`Biometric face similarity in review zone (${params.face.similarityScore}%)`);
+        reviewIndicators.push(
+          `Biometric face similarity in review zone (${params.face.similarityScore}%)`,
+        );
       } else if (params.face.matchStatus === "NO_MATCH") {
         riskPoints += 30;
-        reviewIndicators.push(`Biometric face comparison failed: portrait mismatch (${params.face.similarityScore}%)`);
+        reviewIndicators.push(
+          `Biometric face comparison failed: portrait mismatch (${params.face.similarityScore}%)`,
+        );
       }
     }
 
@@ -107,10 +125,10 @@ export class ScreeningAssessmentEngine {
 
     const explainabilitySummary =
       riskTier === "LOW_RISK"
-        ? "Document screening indicates high compliance with statutory formatting and visual integrity benchmarks. No actionable risk flags identified."
+        ? "Low heuristic triage score from OCR and implemented text checks. Image authenticity and issuer records remain unverified."
         : riskTier === "REVIEW_REQUIRED"
-        ? "Screening indicators identify specific fields or visual elements requiring human reviewer evaluation before operational acceptance."
-        : "Elevated risk index triggered due to critical formatting discrepancies or forensic anomalies. Rigorous manual inspection or secondary identification mandatory.";
+          ? "Screening indicators identify specific text fields requiring human reviewer evaluation before operational acceptance."
+          : "Elevated risk index triggered due to text-readability, missing-field or format/checksum concerns. Rigorous manual inspection or secondary identification mandatory.";
 
     return {
       compositeScore,

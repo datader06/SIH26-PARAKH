@@ -22,7 +22,10 @@ export function maskPAN(pan: string): string {
 
 export function extractPANFields(text: string): ParsedField[] {
   const fields: ParsedField[] = [];
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   // 1. PAN Number matching
   const panRegex = /\b([A-Z]{5}[0-9]{4}[A-Z])\b/;
@@ -39,7 +42,7 @@ export function extractPANFields(text: string): ParsedField[] {
       rawValue: pan,
       maskedValue: maskPAN(pan),
       isSensitive: true,
-      confidence: 98,
+      confidence: 0,
       validationStatus: "VALID",
     });
 
@@ -47,9 +50,10 @@ export function extractPANFields(text: string): ParsedField[] {
       key: "pan_entity_type",
       label: "PAN Entity Classification",
       rawValue: entityType,
+      sourceText: pan,
       maskedValue: entityType,
       isSensitive: false,
-      confidence: 96,
+      confidence: 0,
       validationStatus: "VALID",
     });
   }
@@ -64,7 +68,7 @@ export function extractPANFields(text: string): ParsedField[] {
       rawValue: dobMatch[1],
       maskedValue: dobMatch[1],
       isSensitive: false,
-      confidence: 92,
+      confidence: 0,
       validationStatus: "VALID",
     });
   }
@@ -80,11 +84,16 @@ export function extractPANFields(text: string): ParsedField[] {
   let fatherNameLine = "";
 
   const nameIndex = lines.findIndex(
-    (l) => /Name|Cardholder Name/i.test(l) && !/Father/i.test(l)
+    (l) => /Name|Cardholder Name/i.test(l) && !/Father/i.test(l),
   );
 
-  if (nameIndex !== -1 && lines[nameIndex + 1]) {
-    nameLine = lines[nameIndex + 1];
+  if (nameIndex !== -1) {
+    nameLine =
+      lines[nameIndex]
+        .replace(/^(?:Cardholder\s+Name|Name)\s*[:\-]?\s*/i, "")
+        .trim() ||
+      lines[nameIndex + 1] ||
+      "";
   } else {
     // Heuristic: search clean capital lines before Father's name or DOB
     const dobIndex = lines.findIndex((l) => dobRegex.test(l));
@@ -98,8 +107,13 @@ export function extractPANFields(text: string): ParsedField[] {
 
   // Check if father name has explicit marker
   const fatherIndex = lines.findIndex((l) => /Father(?:'s)?\s*Name/i.test(l));
-  if (fatherIndex !== -1 && lines[fatherIndex + 1]) {
-    fatherNameLine = lines[fatherIndex + 1];
+  if (fatherIndex !== -1) {
+    fatherNameLine =
+      lines[fatherIndex]
+        .replace(/^Father(?:'s)?\s*Name\s*[:\-]?\s*/i, "")
+        .trim() ||
+      lines[fatherIndex + 1] ||
+      "";
   }
 
   if (nameLine && !/INCOME|GOVT|INDIA|DEPARTMENT/i.test(nameLine)) {
@@ -109,7 +123,7 @@ export function extractPANFields(text: string): ParsedField[] {
       rawValue: nameLine.replace(/[^A-Za-z\s]/g, "").trim(),
       maskedValue: nameLine.replace(/[^A-Za-z\s]/g, "").trim(),
       isSensitive: false,
-      confidence: 89,
+      confidence: 0,
       validationStatus: "VALID",
     });
   }
@@ -121,7 +135,7 @@ export function extractPANFields(text: string): ParsedField[] {
       rawValue: fatherNameLine.replace(/[^A-Za-z\s]/g, "").trim(),
       maskedValue: fatherNameLine.replace(/[^A-Za-z\s]/g, "").trim(),
       isSensitive: false,
-      confidence: 85,
+      confidence: 0,
       validationStatus: "VALID",
     });
   }

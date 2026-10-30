@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import aadhaarExample from "@/assets/demo/aadhaar-example.png";
 import { Dialog } from "@/components/ui/Dialog";
 import { AppShell } from "@/components/layout/AppShell";
 import {
@@ -30,37 +31,32 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-// Pre-loaded high-fidelity synthetic statutory ID calibration specimens for immediate testing and evaluation
+// Demo inputs are processed by the same OCR pipeline as user uploads.
 const CALIBRATION_SPECIMENS = [
   {
     name: "Synthetic PAN Specimen (Income Tax Format)",
     type: "PAN_CARD",
     text: "INCOME TAX DEPARTMENT\nGOVT. OF INDIA\nPermanent Account Number Card\nABCPR8291K\nName: PRIYA NAIR\nFather's Name: RAMAN NAIR\nDate of Birth: 22/11/1992",
-    simulatedQuality: { blur: 94, glare: 8, score: 92 },
   },
   {
-    name: "Synthetic Aadhaar Specimen (UIDAI Format)",
+    name: "User-provided Aadhaar demo image",
     type: "AADHAAR_CARD",
-    text: "GOVERNMENT OF INDIA\nUNIQUE IDENTIFICATION AUTHORITY OF INDIA\nAddress: Flat 402, Green Valley Apartments, Bandra West, Mumbai 400050\nDOB: 14/08/1986\nMALE\n5482 9102 3841\nMera Aadhaar, Meri Pehchan",
-    simulatedQuality: { blur: 92, glare: 12, score: 89 },
+    text: "", // The Aadhaar sample uses the supplied image, never a text reconstruction.
   },
   {
     name: "Synthetic Passport Specimen (ICAO 9303 MRZ Format)",
     type: "PASSPORT",
     text: "REPUBLIC OF INDIA / PASSPORT\nType: P Country Code: IND Passport No: Z8192039\nGiven Name: AMITABH Surname: DASGUPTA\nNationality: INDIAN Sex: M Date of Birth: 12/04/1978\nP<INDDASGUPTA<<AMITABH<<<<<<<<<<<<<<<<<<<<<<\nZ8192039<9IND7804128M2804112<<<<<<<<<<<<<<<4",
-    simulatedQuality: { blur: 90, glare: 14, score: 88 },
   },
   {
     name: "Synthetic Driving Licence Specimen (MoRTH Format)",
     type: "DRIVING_LICENCE",
     text: "UNION OF INDIA / DRIVING LICENCE\nTRANSPORT DEPARTMENT\nDL NO: DL-0420180029183\nName: MANPREET SINGH\nDOB: 10/05/1988\nValid Till: 15/06/2038\nCOV: LMV, MCWG",
-    simulatedQuality: { blur: 91, glare: 10, score: 90 },
   },
   {
     name: "Synthetic Voter ID Specimen (ECI EPIC Format)",
     type: "VOTER_ID",
     text: "ELECTION COMMISSION OF INDIA\nELECTOR PHOTO IDENTITY CARD\nWBF2910482\nElector's Name: KAVITA MEHTA\nFather's Name: SURESH MEHTA\nSex: FEMALE Age: 34",
-    simulatedQuality: { blur: 93, glare: 9, score: 91 },
   },
 ];
 
@@ -165,7 +161,42 @@ export default function ScannerPage() {
     reader.readAsDataURL(file);
   };
 
-  const loadSampleSpecimen = (specimen: (typeof CALIBRATION_SPECIMENS)[0]) => {
+  const loadSampleSpecimen = async (
+    specimen: (typeof CALIBRATION_SPECIMENS)[0],
+  ) => {
+    if (isProcessing) return;
+    if (specimen.type === "AADHAAR_CARD") {
+      setIsProcessing(true);
+      setErrorMessage(null);
+      try {
+        const response = await fetch(aadhaarExample.src);
+        if (!response.ok)
+          throw new Error("The Aadhaar example image could not be loaded.");
+        const blob = await response.blob();
+        const image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () =>
+            reject(new Error("The Aadhaar example image could not be read."));
+          reader.readAsDataURL(blob);
+        });
+        await processDocumentPayload({
+          image,
+          fileName: "aadhaar-demo-example.png",
+          mimeType: "image/png",
+          documentType: specimen.type,
+        });
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load the Aadhaar example.",
+        );
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
     // Generate a clean rendered document canvas image
     const canvas = document.createElement("canvas");
     canvas.width = 1000;
@@ -290,8 +321,7 @@ export default function ScannerPage() {
         const json = await res.json();
         setScreeningResult({
           ...screeningResult,
-          documentType: newType,
-          extractedFields: json.data.extractedFields,
+          ...json.data,
         });
         setShowOverrideModal(false);
       } else {
@@ -457,7 +487,7 @@ export default function ScannerPage() {
           {/* Quick Institutional Calibration Specimens */}
           <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
             <span className="text-[11px] uppercase font-mono text-ink-faint mr-1">
-              Synthetic samples:
+              Demo samples:
             </span>
             {CALIBRATION_SPECIMENS.map((doc, idx) => (
               <button
@@ -474,7 +504,8 @@ export default function ScannerPage() {
 
         <p className="text-xs text-ink-soft">
           OCR supports JPG, PNG, and WebP images. PDF text extraction is
-          unavailable.
+          unavailable. Demo images are illustrative; a format/checksum warning
+          is not proof of fraud or government verification.
         </p>
 
         {/* Live Camera Viewfinder Overlay (When Active) */}
@@ -570,7 +601,7 @@ export default function ScannerPage() {
         {screeningResult && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left Column (5 Cols): Interactive Document Canvas Preview */}
-            <div className="lg:col-span-5 space-y-4">
+            <div className="lg:col-span-5 space-y-4 order-2 lg:order-1">
               <div className="p-4 rounded-xl bg-white border border-border space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-border">
                   <div className="flex items-center gap-2">
@@ -594,7 +625,16 @@ export default function ScannerPage() {
                 </div>
 
                 {/* Document Display Canvas */}
-                <div className="relative rounded-lg overflow-hidden bg-surface-200 border border-border aspect-[1.58] flex items-center justify-center p-2 group">
+                <div
+                  className="relative rounded-lg overflow-hidden bg-surface-200 border border-border flex items-center justify-center p-2 group"
+                  style={{
+                    aspectRatio:
+                      screeningResult.document?.width &&
+                      screeningResult.document?.height
+                        ? `${screeningResult.document.width} / ${screeningResult.document.height}`
+                        : "1.58",
+                  }}
+                >
                   {imagePreview?.startsWith("data:application/pdf") ? (
                     <p className="text-sm text-ink-soft">
                       PDF preview unavailable. Review the extracted results.
@@ -606,47 +646,12 @@ export default function ScannerPage() {
                       height={630}
                       src={imagePreview}
                       alt="Scanned Document"
-                      className="max-h-full max-w-full object-contain rounded"
+                      className="h-full w-full object-contain rounded"
                     />
                   ) : (
                     <div className="text-xs text-ink-faint font-mono">
                       No Image Stored
                     </div>
-                  )}
-
-                  {/* Visual Anomaly Bounding Box Overlay */}
-                  {screeningResult.forensicAnomalies?.map(
-                    (anom: any, i: number) => {
-                      if (!anom.boundingBox) return null;
-                      let bbox: {
-                        x: number;
-                        y: number;
-                        width: number;
-                        height: number;
-                      };
-                      try {
-                        bbox = JSON.parse(anom.boundingBox);
-                      } catch {
-                        return null;
-                      }
-
-                      return (
-                        <div
-                          key={i}
-                          className="absolute border-2 border-amber-500 bg-amber-500/15 pointer-events-none rounded transition-all"
-                          style={{
-                            left: `${bbox.x}%`,
-                            top: `${bbox.y}%`,
-                            width: `${bbox.width}%`,
-                            height: `${bbox.height}%`,
-                          }}
-                        >
-                          <span className="absolute -top-5 left-0 px-1 py-0.2 rounded bg-amber-600 text-[11px] font-mono font-bold text-white shadow">
-                            Inspection Zone
-                          </span>
-                        </div>
-                      );
-                    },
                   )}
                 </div>
 
@@ -654,7 +659,7 @@ export default function ScannerPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-1">
                   <div className="p-2 rounded bg-surface-200">
                     <span className="block text-ink-faint text-[11px]">
-                      Detected Type
+                      Document type
                     </span>
                     <span className="font-bold text-ink">
                       {screeningResult.documentType.replace(/_/g, " ")}
@@ -662,10 +667,12 @@ export default function ScannerPage() {
                   </div>
                   <div className="p-2 rounded bg-surface-200">
                     <span className="block text-ink-faint text-[11px]">
-                      Confidence
+                      OCR confidence
                     </span>
                     <span className="font-bold text-emerald-700 font-mono">
-                      {screeningResult.classificationConfidence ?? "—"}%
+                      {screeningResult.ocrConfidenceAvailable
+                        ? `${screeningResult.ocrResult?.averageConfidence}%`
+                        : "Unavailable"}
                     </span>
                   </div>
                   <div className="p-2 rounded bg-surface-200">
@@ -678,15 +685,24 @@ export default function ScannerPage() {
                   </div>
                 </div>
               </div>
+            </div>
 
+            {/* Right Column (7 Cols): Tabbed Inspection Panels */}
+            <div className="lg:col-span-7 space-y-4 order-1 lg:order-2">
               {/* Explainable Screening Assessment Card */}
-              <div className="p-4 rounded-xl bg-white border border-border space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-border">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                    Explainable Risk Assessment
-                  </h3>
+              <section
+                aria-labelledby="screening-risk-heading"
+                className="p-5 sm:p-6 rounded-xl bg-white border border-border border-t-4 border-t-clay-600 space-y-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
+                  <h2
+                    id="screening-risk-heading"
+                    className="text-xl sm:text-2xl font-bold tracking-tight text-ink"
+                  >
+                    Risk Assessment
+                  </h2>
                   <span
-                    className={`px-2 py-0.5 rounded font-mono text-[11px] font-bold ${
+                    className={`px-3 py-1.5 rounded-lg font-mono text-xs font-bold ${
                       screeningResult.riskTier === "LOW_RISK"
                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                         : screeningResult.riskTier === "REVIEW_REQUIRED"
@@ -694,15 +710,15 @@ export default function ScannerPage() {
                           : "bg-rose-50 text-rose-700 border border-rose-200"
                     }`}
                   >
-                    {screeningResult.riskTier.replace("_", " ")}
+                    {screeningResult.riskTier.replace(/_/g, " ")}
                   </span>
                 </div>
 
                 {/* Score Gauge */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 sm:gap-5">
                   <div className="relative flex items-center justify-center">
                     <div
-                      className={`h-16 w-16 rounded-full border-4 flex flex-col items-center justify-center font-mono ${
+                      className={`h-24 w-24 shrink-0 rounded-full border-4 flex flex-col items-center justify-center font-mono ${
                         screeningResult.riskScore <= 25
                           ? "border-emerald-500 text-emerald-700"
                           : screeningResult.riskScore <= 65
@@ -710,16 +726,16 @@ export default function ScannerPage() {
                             : "border-rose-500 text-rose-700"
                       }`}
                     >
-                      <span className="text-lg font-bold leading-none">
+                      <span className="text-3xl font-bold leading-none">
                         {screeningResult.riskScore}
                       </span>
-                      <span className="text-[8px] uppercase tracking-tighter text-ink-soft">
+                      <span className="text-[10px] uppercase tracking-wide text-ink-soft mt-1">
                         / 100 Risk
                       </span>
                     </div>
                   </div>
 
-                  <div className="text-xs text-ink-soft leading-relaxed">
+                  <div className="text-sm text-ink-soft leading-relaxed">
                     {screeningResult.riskAssessment?.compositeScore <= 25
                       ? "Low advisory risk based on the available screening signals. This does not certify document authenticity."
                       : "Operational review indicators identified. Manual supervisor review advised prior to decision."}
@@ -728,7 +744,7 @@ export default function ScannerPage() {
 
                 {/* Signal Factor Lists */}
                 {screeningResult.riskAssessment && (
-                  <div className="space-y-2 pt-2 border-t border-border text-xs">
+                  <div className="space-y-3 pt-4 border-t border-border text-sm">
                     {JSON.parse(
                       screeningResult.riskAssessment.positiveSignalsJson ||
                         "[]",
@@ -737,8 +753,10 @@ export default function ScannerPage() {
                         key={i}
                         className="flex items-start gap-1.5 text-ink-soft"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700 shrink-0 mt-0.5" />
-                        <span className="text-[11px] leading-tight">{sig}</span>
+                        <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm leading-relaxed">
+                          {sig}
+                        </span>
                       </div>
                     ))}
                     {JSON.parse(
@@ -749,17 +767,16 @@ export default function ScannerPage() {
                         key={i}
                         className="flex items-start gap-1.5 text-amber-700"
                       >
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
-                        <span className="text-[11px] leading-tight">{sig}</span>
+                        <AlertTriangle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm leading-relaxed">
+                          {sig}
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            </div>
+              </section>
 
-            {/* Right Column (7 Cols): Tabbed Inspection Panels */}
-            <div className="lg:col-span-7 space-y-4">
               {/* Tab Navigation */}
               <div
                 role="tablist"
@@ -910,13 +927,28 @@ export default function ScannerPage() {
                     )}
                   </div>
 
+                  <p className="text-xs text-ink-soft">
+                    OCR percentages describe recognition of source words. VALID
+                    means the implemented text checks passed; it does not verify
+                    identity or issuance.
+                  </p>
+                  {screeningResult.documentType === "AADHAAR_CARD" &&
+                    !screeningResult.extractedFields?.some(
+                      (field: any) => field.fieldKey === "holder_name",
+                    ) && (
+                      <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                        Full name was not confidently located in OCR text.
+                        Review the original document; a neighboring address is
+                        never used as the name.
+                      </p>
+                    )}
                   <div className="divide-y divide-border/60">
                     {screeningResult.extractedFields?.map((field: any) => (
                       <div
                         key={field.id}
-                        className="py-2.5 flex items-center justify-between text-xs"
+                        className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs"
                       >
-                        <div className="space-y-0.5">
+                        <div className="space-y-0.5 min-w-0 break-words">
                           <span className="text-[11px] text-ink-soft font-medium block">
                             {field.fieldLabel}
                           </span>
@@ -933,7 +965,9 @@ export default function ScannerPage() {
 
                         <div className="flex items-center gap-3">
                           <span className="text-[11px] font-mono text-ink-soft">
-                            {field.confidence}% match
+                            {field.confidenceSource === "OCR_WORDS"
+                              ? `${field.confidence}% OCR`
+                              : "OCR confidence unavailable"}
                           </span>
                           <span
                             className={`text-[11px] px-1.5 py-0.5 rounded font-mono font-bold ${
@@ -963,63 +997,61 @@ export default function ScannerPage() {
                   <div className="flex items-center justify-between pb-3 border-b border-border">
                     <div>
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft">
-                        Structural & Optical Forensics
+                        OCR Evidence & Text Checks
                       </h3>
                       <p className="text-[11px] text-ink-faint">
-                        Heuristic quality and anomaly indicators. These do not
-                        establish document authenticity.
+                        Confidence measures text recognition, not identity
+                        matches. Pixel-level tampering, fonts, sharpness and
+                        glare are not measured.
                       </p>
                     </div>
                   </div>
 
-                  {/* Quality Metrics Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 gap-3 text-xs">
                     <div className="p-2.5 rounded-lg bg-surface-200">
-                      <span className="text-[11px] text-ink-faint block">
-                        Overall Quality
-                      </span>
-                      <span className="text-base font-bold font-mono text-emerald-700">
-                        {screeningResult.documentAnalysis?.qualityScore ?? "—"}
-                        /100
+                      <span className="block text-ink-faint">OCR engine</span>
+                      <span className="font-mono">
+                        {screeningResult.ocrResult?.provider || "Unavailable"}
                       </span>
                     </div>
                     <div className="p-2.5 rounded-lg bg-surface-200">
-                      <span className="text-[11px] text-ink-faint block">
-                        Sharpness Index
+                      <span className="block text-ink-faint">
+                        Recognized words
                       </span>
-                      <span className="text-base font-bold font-mono text-ink">
-                        {screeningResult.documentAnalysis?.blurIndex ?? "—"}%
-                      </span>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-surface-200">
-                      <span className="text-[11px] text-ink-faint block">
-                        Glare Level
-                      </span>
-                      <span className="text-base font-bold font-mono text-ink">
-                        {screeningResult.documentAnalysis?.glareIndex ?? "—"}%
+                      <span className="font-mono">
+                        {screeningResult.ocrResult?.wordsCount ?? "Unavailable"}
                       </span>
                     </div>
                     <div className="p-2.5 rounded-lg bg-surface-200">
-                      <span className="text-[11px] text-ink-faint block">
-                        Resolution
+                      <span className="block text-ink-faint">
+                        Type heuristic score
                       </span>
-                      <span className="text-base font-bold font-mono text-ink">
-                        {screeningResult.documentAnalysis?.resolutionStatus ??
-                          "Unavailable"}
+                      <span className="font-mono">
+                        {screeningResult.classificationConfidence ?? "—"}/100
                       </span>
+                      <p className="text-ink-faint mt-1">
+                        Keyword rules, not a calibrated probability.
+                      </p>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-surface-200">
+                      <span className="block text-ink-faint">
+                        Pixel forensics
+                      </span>
+                      <span>Not available · manual inspection required</span>
                     </div>
                   </div>
 
                   {/* Forensic Findings */}
                   <div className="space-y-2 pt-2">
                     <p className="text-xs font-semibold text-ink-soft">
-                      Forensic Observations
+                      Text Validation Findings
                     </p>
                     {screeningResult.forensicAnomalies?.length === 0 ? (
                       <div className="p-3 rounded-lg bg-surface-200 text-xs text-ink-soft flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-700" />
                         <span>
-                          No significant structural or visual anomaly detected.
+                          No text format/checksum warnings. Image authenticity
+                          has not been assessed.
                         </span>
                       </div>
                     ) : (
@@ -1209,7 +1241,10 @@ export default function ScannerPage() {
                       </span>
                       <span className="text-[11px] font-mono text-ink-faint">
                         {screeningResult.ocrResult?.provider} &bull;{" "}
-                        {screeningResult.ocrResult?.averageConfidence}% Conf.
+                        {screeningResult.ocrConfidenceAvailable
+                          ? `${screeningResult.ocrResult?.averageConfidence}% OCR`
+                          : "Confidence unavailable"}{" "}
+                        · {screeningResult.ocrResult?.wordsCount ?? 0} words
                       </span>
                     </div>
                     <button

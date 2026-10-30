@@ -7,14 +7,18 @@ import { assessImageQuality } from "@/lib/forensics/image-quality";
 import { analyzeForensics } from "@/lib/forensics/forensic-detector";
 import { ScreeningAssessmentEngine } from "@/lib/risk/screening-assessment-engine";
 import crypto from "crypto";
+import { getOCRError } from "@/lib/ocr/evidence";
 
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
-        { error: "Unauthorized. Institutional Bearer API Key required in Authorization header." },
-        { status: 401 }
+        {
+          error:
+            "Unauthorized. Institutional Bearer API Key required in Authorization header.",
+        },
+        { status: 401 },
       );
     }
 
@@ -29,7 +33,7 @@ export async function POST(req: NextRequest) {
     if (!apiKey) {
       return NextResponse.json(
         { error: "Invalid or revoked API Key." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -41,25 +45,42 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     if (!body.image) {
-      return NextResponse.json({ error: "Field 'image' (Base64 string) is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Field 'image' (Base64 string) is required." },
+        { status: 400 },
+      );
     }
 
     const base64Data: string = body.image;
-    const base64Clean = base64Data.includes(",") ? base64Data.split(",")[1] : base64Data;
+    const base64Clean = base64Data.includes(",")
+      ? base64Data.split(",")[1]
+      : base64Data;
     const buffer = Buffer.from(base64Clean, "base64");
     const sha256Hash = crypto.createHash("sha256").update(buffer).digest("hex");
 
     const ocrProvider = OCRFactory.getProvider();
     const ocrResult = await ocrProvider.processImage(base64Data);
+    const ocrError = getOCRError(ocrResult);
+    if (ocrError)
+      return NextResponse.json(ocrError, { status: ocrError.status });
 
     const classification = DocumentClassifier.classify(ocrResult.fullText);
-    const extraction = extractFieldsForDocument(classification.documentType, ocrResult.fullText);
-    const quality = assessImageQuality(1920, 1080, ocrResult.averageConfidence, ocrResult.fullText.length);
+    const extraction = extractFieldsForDocument(
+      classification.documentType,
+      ocrResult.fullText,
+      ocrResult,
+    );
+    const quality = assessImageQuality(
+      ocrResult.imageDimensions?.width,
+      ocrResult.imageDimensions?.height,
+      ocrResult.averageConfidence,
+      ocrResult.fullText.length,
+    );
     const forensics = analyzeForensics(
       classification.documentType,
       extraction.fields,
       ocrResult.averageConfidence,
-      ocrResult.fullText
+      ocrResult.fullText,
     );
 
     const risk = ScreeningAssessmentEngine.evaluate({
@@ -76,6 +97,14 @@ export async function POST(req: NextRequest) {
       screeningId: `TR-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
       documentType: classification.documentType,
       classificationConfidence: classification.confidence,
+      classificationMethod: "TEXT_PATTERN_HEURISTIC",
+      ocr: {
+        provider: ocrResult.provider,
+        confidence: ocrResult.confidenceAvailable
+          ? ocrResult.averageConfidence
+          : null,
+        wordsCount: ocrResult.wordsCount,
+      },
       riskAssessment: {
         score: risk.compositeScore,
         tier: risk.riskTier,
@@ -88,11 +117,14 @@ export async function POST(req: NextRequest) {
         label: f.label,
         maskedValue: f.maskedValue,
         confidence: f.confidence,
+        confidenceSource: f.confidenceSource,
         status: f.validationStatus,
       })),
       forensicAnalysis: {
         anomaliesCount: forensics.anomalies.length,
         qualityScore: quality.qualityScore,
+        qualityScoreSource: "OCR_READABILITY_PROXY",
+        pixelForensicsAvailable: false,
         structuralIntegrity: quality.structuralIntegrity,
       },
       cryptographicHash: sha256Hash,
@@ -100,6 +132,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("[API_V1_SCREENING_ERROR]", error);
-    return NextResponse.json({ error: "Internal Document Intelligence processing error." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Document Intelligence processing error." },
+      { status: 500 },
+    );
   }
 }

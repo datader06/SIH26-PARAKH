@@ -4,6 +4,8 @@ import { extractPANFields } from "./pan";
 import { extractPassportFields, MRZParseResult } from "./passport";
 import { extractDrivingLicenceFields } from "./driving-licence";
 import { extractVoterIDFields } from "./voter-id";
+import { attachFieldEvidence } from "../ocr/evidence";
+import type { OCRResponse } from "../ocr/provider.interface";
 
 export interface ExtractionResult {
   fields: ParsedField[];
@@ -12,7 +14,16 @@ export interface ExtractionResult {
 
 export function extractFieldsForDocument(
   docType: DocumentType,
-  ocrText: string
+  ocrText: string,
+  ocr?: OCRResponse,
+): ExtractionResult {
+  const result = extractUnscoredFields(docType, ocrText);
+  return { ...result, fields: attachFieldEvidence(result.fields, ocr) };
+}
+
+function extractUnscoredFields(
+  docType: DocumentType,
+  ocrText: string,
 ): ExtractionResult {
   switch (docType) {
     case "AADHAAR_CARD":
@@ -36,7 +47,7 @@ export function extractFieldsForDocument(
           rawValue: dobMatch[1],
           maskedValue: dobMatch[1],
           isSensitive: false,
-          confidence: 70,
+          confidence: 0,
           validationStatus: "WARNING",
         });
       }

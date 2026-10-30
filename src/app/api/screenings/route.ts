@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { OCRFactory } from "@/lib/ocr/factory";
-import { DocumentClassifier, DocumentType } from "@/lib/classifier/document-classifier";
+import {
+  DocumentClassifier,
+  DocumentType,
+} from "@/lib/classifier/document-classifier";
 import { extractFieldsForDocument } from "@/lib/extractors";
 import { assessImageQuality } from "@/lib/forensics/image-quality";
 import { analyzeForensics } from "@/lib/forensics/forensic-detector";
 import { ScreeningAssessmentEngine } from "@/lib/risk/screening-assessment-engine";
 import { recordAuditLog } from "@/lib/audit/logger";
 import crypto from "crypto";
+import {
+  getOCRError,
+  serializeOCREvidence,
+  presentScreening,
+} from "@/lib/ocr/evidence";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +24,10 @@ export async function GET(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      return NextResponse.json({ error: "Unauthorized. Session required." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized. Session required." },
+        { status: 401 },
+      );
     }
 
     const { searchParams } = new URL(req.url);
@@ -82,7 +93,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error("[SCREENINGS_GET_ERROR]", error);
-    return NextResponse.json({ error: "Failed to retrieve screening records." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to retrieve screening records." },
+      { status: 500 },
+    );
   }
 }
 
@@ -91,7 +105,10 @@ export async function POST(req: NextRequest) {
   try {
     const sessionUser = await getCurrentUser();
     if (!sessionUser) {
-      return NextResponse.json({ error: "Unauthorized. Operator session required." }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized. Operator session required." },
+        { status: 401 },
+      );
     }
 
     const operatorId = sessionUser.id;
@@ -112,7 +129,10 @@ export async function POST(req: NextRequest) {
       if (docTypeParam) forcedDocType = docTypeParam as DocumentType;
 
       if (!file) {
-        return NextResponse.json({ error: "No document file provided in request." }, { status: 400 });
+        return NextResponse.json(
+          { error: "No document file provided in request." },
+          { status: 400 },
+        );
       }
 
       fileName = file.name || "upload.jpg";
@@ -123,40 +143,70 @@ export async function POST(req: NextRequest) {
     } else {
       const body = await req.json();
       if (!body.image) {
-        return NextResponse.json({ error: "Missing document image payload." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Missing document image payload." },
+          { status: 400 },
+        );
       }
       base64Data = body.image;
       fileName = body.fileName || "camera_scan.jpg";
       mimeType = body.mimeType || "image/jpeg";
       if (body.documentType) forcedDocType = body.documentType as DocumentType;
 
-      const base64Clean = base64Data!.includes(",") ? base64Data!.split(",")[1] : base64Data!;
+      const base64Clean = base64Data!.includes(",")
+        ? base64Data!.split(",")[1]
+        : base64Data!;
       fileBuffer = Buffer.from(base64Clean, "base64");
     }
 
+    if (fileBuffer.length > 15 * 1024 * 1024)
+      return NextResponse.json(
+        { error: "Image exceeds the 15 MB limit." },
+        { status: 413 },
+      );
+    if (
+      mimeType === "application/pdf" ||
+      fileBuffer.subarray(0, 4).toString() === "%PDF"
+    )
+      return NextResponse.json(
+        { error: "PDF OCR is unavailable. Upload a PNG, JPG or WebP image." },
+        { status: 415 },
+      );
+
     // SHA-256 integrity hash
-    const sha256Hash = crypto.createHash("sha256").update(fileBuffer).digest("hex");
+    const sha256Hash = crypto
+      .createHash("sha256")
+      .update(fileBuffer)
+      .digest("hex");
     const screeningId = `TR-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
 
     // Execute OCR Provider
     const ocrProvider = OCRFactory.getProvider();
     const ocrResult = await ocrProvider.processImage(base64Data || fileBuffer);
+    const ocrError = getOCRError(ocrResult);
+    if (ocrError)
+      return NextResponse.json(ocrError, { status: ocrError.status });
 
     // Classify Document
     const classification = DocumentClassifier.classify(ocrResult.fullText);
-    const finalDocType: DocumentType = forcedDocType && forcedDocType !== "UNKNOWN"
-      ? forcedDocType
-      : classification.documentType;
+    const finalDocType: DocumentType =
+      forcedDocType && forcedDocType !== "UNKNOWN"
+        ? forcedDocType
+        : classification.documentType;
 
     // Structured Field Extraction
-    const extraction = extractFieldsForDocument(finalDocType, ocrResult.fullText);
+    const extraction = extractFieldsForDocument(
+      finalDocType,
+      ocrResult.fullText,
+      ocrResult,
+    );
 
     // Image Quality Assessment
     const quality = assessImageQuality(
-      1920,
-      1080,
+      ocrResult.imageDimensions?.width,
+      ocrResult.imageDimensions?.height,
       ocrResult.averageConfidence,
-      ocrResult.fullText.length
+      ocrResult.fullText.length,
     );
 
     // Forensic Anomaly Inspection
@@ -164,7 +214,7 @@ export async function POST(req: NextRequest) {
       finalDocType,
       extraction.fields,
       ocrResult.averageConfidence,
-      ocrResult.fullText
+      ocrResult.fullText,
     );
 
     // Screening Risk Assessment
@@ -182,8 +232,8 @@ export async function POST(req: NextRequest) {
       risk.riskTier === "HIGH_RISK"
         ? "FLAGGED"
         : risk.riskTier === "REVIEW_REQUIRED"
-        ? "REQUIRES_REVIEW"
-        : "COMPLETED";
+          ? "REQUIRES_REVIEW"
+          : "COMPLETED";
 
     // Save to database
     const session = await prisma.screeningSession.create({
@@ -204,7 +254,9 @@ export async function POST(req: NextRequest) {
             mimeType,
             fileSize: fileBuffer.length,
             sha256Hash,
-            base64Data: base64Data?.slice(0, 1000000), // Keep for visual workbench
+            base64Data, // Preserve the complete image; truncation corrupts previews and coordinates.
+            width: ocrResult.imageDimensions?.width,
+            height: ocrResult.imageDimensions?.height,
           },
         },
         ocrResult: {
@@ -215,7 +267,7 @@ export async function POST(req: NextRequest) {
             wordsCount: ocrResult.wordsCount,
             linesCount: ocrResult.linesCount,
             executionTimeMs: ocrResult.executionTimeMs,
-            wordsJson: ocrResult.words ? JSON.stringify(ocrResult.words.slice(0, 80)) : null,
+            wordsJson: serializeOCREvidence(ocrResult, extraction.fields),
           },
         },
         documentAnalysis: {
@@ -292,13 +344,16 @@ export async function POST(req: NextRequest) {
       riskScore: risk.compositeScore,
       riskTier: risk.riskTier,
       processingTimeMs,
-      data: session,
+      data: presentScreening(session),
     });
   } catch (error: any) {
     console.error("[SCREENING_PIPELINE_ERROR]", error);
     return NextResponse.json(
-      { error: "We couldn't reliably process this document. Please upload a clearer image or try again." },
-      { status: 500 }
+      {
+        error:
+          "We couldn't reliably process this document. Please upload a clearer image or try again.",
+      },
+      { status: 500 },
     );
   }
 }

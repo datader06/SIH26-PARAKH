@@ -7,7 +7,7 @@ export interface OCRBoundingBox {
 
 export interface OCRWord {
   text: string;
-  confidence: number;
+  confidence: number | null;
   bbox?: OCRBoundingBox;
 }
 
@@ -19,6 +19,9 @@ export interface OCRResponse {
   linesCount: number;
   executionTimeMs: number;
   words?: OCRWord[];
+  status?: "SUCCEEDED" | "NO_TEXT" | "FAILED";
+  confidenceAvailable?: boolean;
+  imageDimensions?: { width: number; height: number };
 }
 
 export interface IOCRProvider {

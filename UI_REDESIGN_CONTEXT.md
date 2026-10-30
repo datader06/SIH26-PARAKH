@@ -1,5 +1,19 @@
 # UI redesign context
 
+## Scanner risk hierarchy — 2026-10-31
+
+`src/app/scanner/page.tsx` places Risk Assessment at the top of the desktop right column, with a bold 20/24px heading, enlarged score/status and readable signal lists. OCR tabs and extracted details follow directly beneath; the document preview stays in the left column. On mobile/tablet the assessment and details precede the preview. This is a layout/typography adjustment only; existing risk values, OCR evidence, API behavior and advisory language are preserved. Real isolated Aadhaar OCR smoke and runtime geometry assertions passed at 390/768/1440px (risk before fields, top-right placement on desktop, prominent heading, no body overflow); screenshot reviewed. TypeScript and focused ESLint passed. The original user database was not accessed or modified by these checks.
+
+## Supplied Aadhaar example — 2026-10-30
+
+The AADHAAR demo button now processes `src/assets/demo/aadhaar-example.png`, the exact image supplied by the user. It no longer draws the old Aadhaar text specimen. The preview preserves the measured image aspect ratio; the sample has an invalid placeholder ID, so a text/checksum warning is expected. The input hash and actual OCR extraction were verified in the isolated browser test, including mobile/tablet/desktop result containment. A cross-document video kit is available under `tests/fixtures/cross-document/README.md`; that workflow is in Applications and does not imply an implemented Aadhaar/PAN name or DOB matching feature. See the latest PROJECT_CONTEXT.md section for test scope.
+
+## OCR result truthfulness correction — 2026-10-30
+
+`src/app/scanner/page.tsx` removes all template inspection-zone overlays. The preview metadata displays actual OCR confidence with availability; fields display evidence-backed `% OCR` or unavailable, never `% match`. A missing Aadhaar name has an explicit notice rather than borrowing the address. The forensics tab presents the OCR provider, recognized-word count, labeled type heuristic score and text format/checksum findings; pixel forensics, sharpness and glare are explicitly unavailable. VALID means implemented text checks passed, not verified identity or issuance. Raw OCR exposes the real engine, confidence and word count.
+
+`src/app/reports/[id]/page.tsx` suppresses unsupported legacy risk explanations, marks old field confidence unavailable and displays a re-scan notice for legacy analysis. Stored historical risk scores are not rewritten. The version-2 evidence envelope and classifier/risk limitations are documented in PROJECT_CONTEXT.md. Actual Aadhaar and blank-image Tesseract flows, type override, screenshot review and 390/768/1440px result layouts passed in an isolated temporary app; the full UI smoke suite, types, lint, domain tests and direct production build passed. Cloud Vision was tested with response fixtures only. No real pixel-level tamper model or external identity verification was added.
+
 ## Current UI — implemented 2026-10-30
 
 The redesign is complete across all 16 page entry points. Public: light sage/ivory document composition with copper accents, editorial typography, anchored storytelling, interactive workflow, accessible sign-in. Workspace: pale sage AICTE-first navigation, cool ivory canvas, white evidence panels, shared session state and command navigation. Shared Radix Dialog/Skeleton/feedback primitives and keyboard-accessible charts/tabs are in use. Static operational claims and fabricated scanner results were replaced with truthful states; unsupported settings remain explicitly local previews. See UI_REDESIGN_RESEARCH.md for sources, affected files, licensing, validation and remaining limits. The source-based inventory below is preserved as a historical pre-redesign baseline, not a description of the current UI.

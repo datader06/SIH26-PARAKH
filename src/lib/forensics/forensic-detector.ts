@@ -2,7 +2,12 @@ import { DocumentType } from "../classifier/document-classifier";
 import { ParsedField } from "../extractors/aadhaar";
 
 export interface AnomalyReport {
-  anomalyType: "FONT_INCONSISTENCY" | "EDGE_DISCONTINUITY" | "SUSPICIOUS_ARTIFACT" | "LAYOUT_DISCREPANCY" | "FIELD_SYNTAX_WARNING";
+  anomalyType:
+    | "FONT_INCONSISTENCY"
+    | "EDGE_DISCONTINUITY"
+    | "SUSPICIOUS_ARTIFACT"
+    | "LAYOUT_DISCREPANCY"
+    | "FIELD_SYNTAX_WARNING";
   severity: "INFO" | "MODERATE" | "HIGH";
   title: string;
   explanation: string;
@@ -28,93 +33,53 @@ export function analyzeForensics(
   docType: DocumentType,
   fields: ParsedField[],
   ocrConfidence: number,
-  rawText: string
+  rawText: string,
 ): ForensicResult {
   const anomalies: AnomalyReport[] = [];
-  let fontConsistencyScore = 95;
-  let layoutAlignmentScore = 94;
-
-  // 1. Check field-level syntax discrepancies
-  const warningFields = fields.filter((f) => f.validationStatus === "WARNING");
-  if (warningFields.length > 0) {
-    for (const wf of warningFields) {
-      anomalies.push({
-        anomalyType: "FIELD_SYNTAX_WARNING",
-        severity: "MODERATE",
-        title: `Syntax Verification Note: ${wf.label}`,
-        explanation: `Field '${wf.label}' contains characters or structure deviating slightly from statutory format. Additional visual inspection recommended.`,
-        confidence: 82,
-        boundingBox: { x: 25, y: 45, width: 50, height: 12 },
-      });
-    }
-  }
-
-  // 2. Document specific structural inspection
-  if (docType === "PAN_CARD") {
-    const panField = fields.find((f) => f.key === "pan_number");
-    if (!panField) {
-      anomalies.push({
-        anomalyType: "LAYOUT_DISCREPANCY",
-        severity: "HIGH",
-        title: "Statutory PAN Field Not Distinctly Identified",
-        explanation: "The primary 10-character alphanumeric PAN identifier was not located in expected visual quadrant.",
-        confidence: 89,
-        boundingBox: { x: 40, y: 65, width: 35, height: 15 },
-      });
-      layoutAlignmentScore -= 20;
-    }
-  } else if (docType === "AADHAAR_CARD") {
-    const aadhaarField = fields.find((f) => f.key === "aadhaar_number");
-    if (aadhaarField && aadhaarField.confidence < 85) {
-      anomalies.push({
-        anomalyType: "FONT_INCONSISTENCY",
-        severity: "MODERATE",
-        title: "Potential Font Micro-Variation in UID Region",
-        explanation: "Visual density analysis indicates minor pixel variance in the numerical identifier region. Recommend verifying against physical card tactile print.",
-        confidence: 76,
-        boundingBox: { x: 30, y: 72, width: 42, height: 14 },
-      });
-      fontConsistencyScore -= 12;
-    }
-  } else if (docType === "PASSPORT") {
-    const passField = fields.find((f) => f.key === "passport_number");
-    if (passField && passField.validationStatus === "WARNING") {
-      anomalies.push({
-        anomalyType: "LAYOUT_DISCREPANCY",
-        severity: "HIGH",
-        title: "MRZ Checksum Mismatch",
-        explanation: "ICAO Doc 9303 checksum recalculation did not match the encoded check digit. Potential optical read error or modified characters.",
-        confidence: 91,
-        boundingBox: { x: 5, y: 82, width: 90, height: 14 },
-      });
-      layoutAlignmentScore -= 15;
-    }
-  }
-
-  // 3. Noise / Compression artifact check
-  if (ocrConfidence < 70) {
+  for (const field of fields.filter(
+    (field) => field.validationStatus !== "VALID",
+  )) {
     anomalies.push({
-      anomalyType: "SUSPICIOUS_ARTIFACT",
-      severity: "INFO",
-      title: "Elevated Compression Artifacts Detected",
-      explanation: "Block boundary compression detected in document texture; may reduce optical character legibility.",
-      confidence: 74,
-    });
+      anomalyType: "FIELD_SYNTAX_WARNING",
+      severity: "MODERATE",
+      title: `Format / checksum review: ${field.label}`,
+      explanation: `The extracted ${field.label} failed a parser format or checksum check. This is a text validation finding, not evidence of altered fonts or pixels.`,
+      confidence: 0,
+    }); // No calibrated probability or image location exists for this rule.
   }
-
-  const overallAnomalyDetected = anomalies.some((a) => a.severity === "HIGH" || a.severity === "MODERATE");
-  const analysisConfidence = Math.round(Math.min(99, Math.max(75, ocrConfidence * 0.6 + 40)));
-
-  const findingsSummary = anomalies.length === 0
-    ? "No significant structural or visual anomaly detected. Layout geometry and fonts conform to standard issuance templates."
-    : `Identified ${anomalies.length} inspection point(s) requiring operational verification. Note: Visual analysis findings represent algorithmic indicators and do not constitute a definitive legal determination.`;
-
+  const requiredKey: Partial<Record<DocumentType, string>> = {
+    AADHAAR_CARD: "aadhaar_number",
+    PAN_CARD: "pan_number",
+    PASSPORT: "passport_number",
+    DRIVING_LICENCE: "dl_number",
+    VOTER_ID: "epic_number",
+  };
+  const key = requiredKey[docType];
+  if (key && !fields.some((field) => field.key === key))
+    anomalies.push({
+      anomalyType: "FIELD_SYNTAX_WARNING",
+      severity: "HIGH",
+      title: "Primary identifier not extracted",
+      explanation:
+        "The expected identifier was not found in OCR text. Check the image and selected document type; no visual location is inferred.",
+      confidence: 0,
+    });
+  if (ocrConfidence < 70)
+    anomalies.push({
+      anomalyType: "FIELD_SYNTAX_WARNING",
+      severity: "INFO",
+      title: "OCR readability requires review",
+      explanation:
+        "The OCR engine reported low text-recognition confidence. Blur, glare and compression were not measured and cannot be inferred from this value alone.",
+      confidence: 0,
+    });
   return {
-    overallAnomalyDetected,
-    analysisConfidence,
-    fontConsistencyScore,
-    layoutAlignmentScore,
+    overallAnomalyDetected: anomalies.some((item) => item.severity !== "INFO"),
+    analysisConfidence: 0,
+    fontConsistencyScore: 0,
+    layoutAlignmentScore: 0,
     anomalies,
-    findingsSummary,
+    findingsSummary:
+      "Text format and checksum checks only. Pixel-level tampering, font, layout and compression analysis are not implemented.",
   };
 }
